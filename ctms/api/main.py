@@ -22,6 +22,10 @@ from ctms.database.models import (
     IndicatorOfCompromise, ThreatIntelligence, Alert, ScrapingSource,
     ScrapedContent, User, ThreatType, SeverityLevel, AlertStatus
 )
+from ctms.intelligence.stix_processor import STIXProcessor, create_sample_stix_bundle
+from ctms.connectors.mitre_attack_connector import MitreAttackConnector, create_mitre_connector_config
+from ctms.connectors.base_connector import ConnectorFactory
+from ctms.database.stix_models import STIX_MODEL_REGISTRY
 
 logger = get_logger(__name__)
 
@@ -820,6 +824,228 @@ async def search_intelligence(
     except Exception as e:
         logger.error(f"❌ Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search failed")
+
+
+# =============================================================================
+# OPENCTI-INSPIRED STIX ENDPOINTS
+# =============================================================================
+
+@app.post("/api/v1/stix/import")
+async def import_stix_bundle(
+    bundle_data: Dict[str, Any],
+    update_existing: bool = True,
+    auto_enrich: bool = True,
+    current_user: str = Depends(verify_token)
+):
+    """
+    Import STIX 2.1 bundle (OpenCTI-inspired)
+    """
+    try:
+        # Initialize STIX processor
+        from ctms.database.connection import get_database_manager
+        db_manager = await get_database_manager()
+        stix_processor = STIXProcessor(db_manager)
+        
+        # Process the bundle
+        result = await stix_processor.process_bundle(
+            bundle_data=bundle_data,
+            update_existing=update_existing,
+            auto_enrich=auto_enrich
+        )
+        
+        logger.info(f"📦 STIX bundle imported: {result.objects_created} created, "
+                   f"{result.objects_updated} updated")
+        
+        return {
+            "status": "success" if result.success else "partial_success",
+            "bundle_id": result.bundle_id,
+            "objects_created": result.objects_created,
+            "objects_updated": result.objects_updated,
+            "relationships_created": result.relationships_created,
+            "errors": result.errors,
+            "warnings": result.warnings
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ STIX import failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"STIX import failed: {str(e)}"
+        )
+
+
+@app.get("/api/v1/stix/export")
+async def export_stix_bundle(
+    object_ids: Optional[List[str]] = None,
+    object_types: Optional[List[str]] = None,
+    include_relationships: bool = True,
+    current_user: str = Depends(verify_token)
+):
+    """
+    Export data as STIX 2.1 bundle (OpenCTI-inspired)
+    """
+    try:
+        # Initialize STIX processor
+        from ctms.database.connection import get_database_manager
+        db_manager = await get_database_manager()
+        stix_processor = STIXProcessor(db_manager)
+        
+        # Export bundle
+        bundle = await stix_processor.export_to_stix_bundle(
+            object_ids=object_ids,
+            object_types=object_types,
+            include_relationships=include_relationships
+        )
+        
+        logger.info(f"📤 STIX bundle exported: {len(bundle.objects)} objects")
+        
+        return bundle.dict()
+        
+    except Exception as e:
+        logger.error(f"❌ STIX export failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"STIX export failed: {str(e)}"
+        )
+
+
+@app.get("/api/v1/stix/sample")
+async def get_sample_stix_bundle(current_user: str = Depends(verify_token)):
+    """
+    Get sample STIX bundle for testing
+    """
+    try:
+        bundle = create_sample_stix_bundle()
+        return bundle.dict()
+        
+    except Exception as e:
+        logger.error(f"❌ Sample STIX bundle creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sample creation failed: {str(e)}"
+        )
+
+
+# =============================================================================
+# OPENCTI-INSPIRED CONNECTOR ENDPOINTS
+# =============================================================================
+
+# Global connector registry for the API
+ACTIVE_CONNECTORS: Dict[str, Any] = {}
+
+@app.get("/api/v1/connectors")
+async def list_connectors(current_user: str = Depends(verify_token)):
+    """
+    List all available and active connectors (OpenCTI-inspired)
+    """
+    try:
+        from ctms.connectors import list_connectors
+        
+        available_connectors = list_connectors()
+        active_connector_status = {}
+        
+        for connector_id, connector in ACTIVE_CONNECTORS.items():
+            status = await connector.health_check()
+            active_connector_status[connector_id] = status
+        
+        return {
+            "available_connectors": list(available_connectors.keys()),
+            "active_connectors": active_connector_status,
+            "total_available": len(available_connectors),
+            "total_active": len(ACTIVE_CONNECTORS)
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Connector listing failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Connector listing failed: {str(e)}"
+        )
+
+
+@app.post("/api/v1/connectors/mitre/start")
+async def start_mitre_connector(
+    domains: List[str] = ["enterprise"],
+    interval_hours: int = 24,
+    current_user: str = Depends(verify_token)
+):
+    """
+    Start MITRE ATT&CK connector (OpenCTI-inspired)
+    """
+    try:
+        connector_id = "mitre-attack-connector"
+        
+        # Check if already running
+        if connector_id in ACTIVE_CONNECTORS:
+            return {"message": "MITRE connector is already running", "connector_id": connector_id}
+        
+        # Create configuration
+        config = create_mitre_connector_config(
+            connector_id=connector_id,
+            domains=domains,
+            interval_hours=interval_hours
+        )
+        
+        # Create and start connector
+        connector = MitreAttackConnector(config)
+        
+        # Set database manager
+        from ctms.database.connection import get_database_manager
+        db_manager = await get_database_manager()
+        connector.set_database_manager(db_manager)
+        
+        # Store in registry
+        ACTIVE_CONNECTORS[connector_id] = connector
+        
+        # Start connector in background
+        import asyncio
+        asyncio.create_task(connector.start())
+        
+        logger.info(f"🔌 MITRE connector started: {connector_id}")
+        
+        return {
+            "message": "MITRE connector started successfully",
+            "connector_id": connector_id,
+            "configuration": {
+                "domains": domains,
+                "interval_hours": interval_hours
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ MITRE connector start failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"MITRE connector start failed: {str(e)}"
+        )
+
+
+@app.get("/api/v1/connectors/{connector_id}/status")
+async def get_connector_status(
+    connector_id: str,
+    current_user: str = Depends(verify_token)
+):
+    """
+    Get connector status and health information (OpenCTI-inspired)
+    """
+    try:
+        if connector_id not in ACTIVE_CONNECTORS:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Connector {connector_id} not found or not running"
+            )
+        
+        connector = ACTIVE_CONNECTORS[connector_id]
+        status = await connector.health_check()
+        
+        return status
+        
+    except Exception as e:
+        logger.error(f"❌ Connector status check failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Connector status check failed: {str(e)}"
+        )
 
 
 # =============================================================================

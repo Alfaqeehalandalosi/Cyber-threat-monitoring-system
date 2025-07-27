@@ -571,3 +571,8 @@ async def close_databases():
 async def database_health():
     """Get database health status."""
     return await db_manager.health_check()
+
+
+async def get_database_manager():
+    """Get the global database manager instance."""
+    return db_manager
