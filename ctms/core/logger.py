@@ -79,7 +79,6 @@ class LoggerManager:
             "{time:YYYY-MM-DD HH:mm:ss.SSS} | "
             "{level: <8} | "
             "{name}:{function}:{line} | "
-            "{extra[request_id]:{request_id}} | "
             "{message}"
         )
         
@@ -315,3 +314,6 @@ try:
 except ImportError:
     # Fallback to default configuration if settings not available
     configure_logging()
+
+# Export logger instance for easy import
+logger = get_logger(__name__)

@@ -671,8 +671,15 @@ class STIXProcessor:
 def create_sample_stix_bundle() -> STIXBundle:
     """Create sample STIX bundle for testing"""
     
+    # Generate unique IDs
+    indicator_id = f"indicator--{str(uuid.uuid4())}"
+    malware_id = f"malware--{str(uuid.uuid4())}"
+    relationship_id = f"relationship--{str(uuid.uuid4())}"
+    bundle_id = f"bundle--{str(uuid.uuid4())}"
+    
     # Create sample indicator
     indicator = STIXIndicator(
+        id=indicator_id,
         pattern="[ipv4-addr:value = '192.168.1.100']",
         labels=['malicious-activity'],
         valid_from=datetime.utcnow(),
@@ -682,6 +689,7 @@ def create_sample_stix_bundle() -> STIXBundle:
     
     # Create sample malware
     malware = STIXMalware(
+        id=malware_id,
         name="Sample Trojan",
         malware_types=['trojan'],
         is_family=False,
@@ -691,14 +699,16 @@ def create_sample_stix_bundle() -> STIXBundle:
     
     # Create relationship
     relationship = STIXRelationship(
-        source_ref=indicator.id,
-        target_ref=malware.id,
+        id=relationship_id,
+        source_ref=indicator_id,
+        target_ref=malware_id,
         relationship_type='indicates',
         description="Indicator indicates malware presence"
     )
     
     # Create bundle
     bundle = STIXBundle(
+        id=bundle_id,
         objects=[
             indicator.dict(),
             malware.dict(),

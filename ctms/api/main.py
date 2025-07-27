@@ -45,8 +45,13 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Cyber Threat Monitoring System API")
     
     try:
-        # Initialize databases
-        await initialize_databases()
+        # Initialize databases (skip in demo mode)
+        if not settings.demo_mode:
+            await initialize_databases()
+            logger.info("✅ Database connections initialized")
+        else:
+            logger.info("📋 Running in DEMO MODE - skipping database initialization")
+        
         logger.info("✅ API startup completed successfully")
         
         yield
@@ -58,7 +63,8 @@ async def lifespan(app: FastAPI):
     finally:
         # Shutdown
         logger.info("🛑 Shutting down API")
-        await close_databases()
+        if not settings.demo_mode:
+            await close_databases()
         logger.info("✅ API shutdown completed")
 
 
@@ -132,13 +138,19 @@ async def health_check() -> Dict[str, Any]:
         Dict[str, Any]: System health status
     """
     try:
-        # Check database health
-        db_health = await database_health()
+        # Check database health (skip in demo mode)
+        if not settings.demo_mode:
+            db_health = await database_health()
+            status = "healthy" if db_health["overall_status"] == "healthy" else "unhealthy"
+        else:
+            db_health = {"overall_status": "demo", "message": "Running in demo mode"}
+            status = "healthy"
         
         health_status = {
-            "status": "healthy" if db_health["overall_status"] == "healthy" else "unhealthy",
+            "status": status,
             "timestamp": datetime.utcnow().isoformat(),
             "version": "1.0.0",
+            "demo_mode": settings.demo_mode,
             "databases": db_health,
             "uptime": "running"
         }

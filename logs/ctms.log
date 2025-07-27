@@ -1,0 +1,258 @@
+2025-07-27 09:34:57.745 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:35:03.126 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:35:10.282 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:35:16.843 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:35:23.865 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:36:49.979 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:36:50.458 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:36:50.458 | INFO     | ctms.core.logger:info:144 | 🚀 Initializing database connections...
+2025-07-27 09:36:50.458 | INFO     | ctms.core.logger:info:144 | 🔌 Connecting to MongoDB...
+2025-07-27 09:36:55.916 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:37:01.715 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:37:08.586 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:37:09.064 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:37:09.064 | INFO     | ctms.core.logger:info:144 | 🚀 Initializing database connections...
+2025-07-27 09:37:09.065 | INFO     | ctms.core.logger:info:144 | 🔌 Connecting to MongoDB...
+2025-07-27 09:37:10.495 | ERROR    | ctms.core.logger:error:152 | ❌ Failed to connect to MongoDB: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f332fba634d905a61213, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:37:10.496 | ERROR    | ctms.core.logger:error:152 | ❌ Failed to initialize databases: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f332fba634d905a61213, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:37:10.496 | INFO     | ctms.core.logger:info:144 | 🔌 MongoDB connection closed
+2025-07-27 09:37:10.496 | INFO     | ctms.core.logger:info:144 | 🔌 All database connections closed
+2025-07-27 09:37:10.496 | ERROR    | ctms.core.logger:error:152 | ❌ API startup failed: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f332fba634d905a61213, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:37:10.496 | INFO     | ctms.core.logger:info:144 | 🛑 Shutting down API
+2025-07-27 09:37:10.496 | INFO     | ctms.core.logger:info:144 | 🔌 MongoDB connection closed
+2025-07-27 09:37:10.496 | INFO     | ctms.core.logger:info:144 | 🔌 All database connections closed
+2025-07-27 09:37:10.496 | INFO     | ctms.core.logger:info:144 | ✅ API shutdown completed
+2025-07-27 09:37:29.099 | ERROR    | ctms.core.logger:error:152 | ❌ Failed to connect to MongoDB: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f345ac3a40f410614f84, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:37:29.100 | ERROR    | ctms.core.logger:error:152 | ❌ Failed to initialize databases: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f345ac3a40f410614f84, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:37:29.100 | INFO     | ctms.core.logger:info:144 | 🔌 MongoDB connection closed
+2025-07-27 09:37:29.100 | INFO     | ctms.core.logger:info:144 | 🔌 All database connections closed
+2025-07-27 09:37:29.100 | ERROR    | ctms.core.logger:error:152 | ❌ API startup failed: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f345ac3a40f410614f84, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:37:29.100 | INFO     | ctms.core.logger:info:144 | 🛑 Shutting down API
+2025-07-27 09:37:29.100 | INFO     | ctms.core.logger:info:144 | 🔌 MongoDB connection closed
+2025-07-27 09:37:29.101 | INFO     | ctms.core.logger:info:144 | 🔌 All database connections closed
+2025-07-27 09:37:29.101 | INFO     | ctms.core.logger:info:144 | ✅ API shutdown completed
+2025-07-27 09:37:40.873 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:37:41.352 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:37:41.353 | INFO     | ctms.core.logger:info:144 | 🚀 Initializing database connections...
+2025-07-27 09:37:41.353 | INFO     | ctms.core.logger:info:144 | 🔌 Connecting to MongoDB...
+2025-07-27 09:38:01.387 | ERROR    | ctms.core.logger:error:152 | ❌ Failed to connect to MongoDB: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f36550014115cf9c4477, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:38:01.387 | ERROR    | ctms.core.logger:error:152 | ❌ Failed to initialize databases: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f36550014115cf9c4477, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:38:01.388 | INFO     | ctms.core.logger:info:144 | 🔌 MongoDB connection closed
+2025-07-27 09:38:01.388 | INFO     | ctms.core.logger:info:144 | 🔌 All database connections closed
+2025-07-27 09:38:01.388 | ERROR    | ctms.core.logger:error:152 | ❌ API startup failed: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 20.0s, Topology Description: <TopologyDescription id: 6885f36550014115cf9c4477, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+2025-07-27 09:38:01.388 | INFO     | ctms.core.logger:info:144 | 🛑 Shutting down API
+2025-07-27 09:38:01.388 | INFO     | ctms.core.logger:info:144 | 🔌 MongoDB connection closed
+2025-07-27 09:38:01.388 | INFO     | ctms.core.logger:info:144 | 🔌 All database connections closed
+2025-07-27 09:38:01.388 | INFO     | ctms.core.logger:info:144 | ✅ API shutdown completed
+2025-07-27 09:39:42.230 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:39:42.707 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:39:42.708 | INFO     | ctms.core.logger:info:144 | 📋 Running in DEMO MODE - skipping database initialization
+2025-07-27 09:39:42.708 | INFO     | ctms.core.logger:info:144 | ✅ API startup completed successfully
+2025-07-27 09:39:55.707 | ERROR    | ctms.core.logger:error:152 | HTTP 403: Not authenticated
+2025-07-27 09:40:02.083 | ERROR    | ctms.core.logger:error:152 | ❌ Sample STIX bundle creation failed: 10 validation errors for STIXIndicator
+id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+lang
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_entity_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_score
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+pattern_version
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+valid_until
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_main_observable_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:40:02.084 | ERROR    | ctms.core.logger:error:152 | HTTP 500: Sample creation failed: 10 validation errors for STIXIndicator
+id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+lang
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_entity_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_score
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+pattern_version
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+valid_until
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_main_observable_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:40:44.068 | ERROR    | ctms.core.logger:error:152 | ❌ Sample STIX bundle creation failed: 10 validation errors for STIXIndicator
+id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+lang
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_entity_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_score
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+pattern_version
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+valid_until
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_main_observable_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:40:44.069 | ERROR    | ctms.core.logger:error:152 | HTTP 500: Sample creation failed: 10 validation errors for STIXIndicator
+id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+lang
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_entity_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_created_by_ref
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_score
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+pattern_version
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+valid_until
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_main_observable_type
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:40:55.585 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:40:56.070 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:40:56.070 | INFO     | ctms.core.logger:info:144 | 📋 Running in DEMO MODE - skipping database initialization
+2025-07-27 09:40:56.070 | INFO     | ctms.core.logger:info:144 | ✅ API startup completed successfully
+2025-07-27 09:41:02.906 | ERROR    | ctms.core.logger:error:152 | ❌ Sample STIX bundle creation failed: 1 validation error for STIXIndicator
+id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:41:02.906 | ERROR    | ctms.core.logger:error:152 | HTTP 500: Sample creation failed: 1 validation error for STIXIndicator
+id
+  Field required [type=missing, input_value={'pattern': "[ipv4-addr:v...pencti_detection': True}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:41:51.370 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:41:51.844 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:41:51.845 | INFO     | ctms.core.logger:info:144 | 📋 Running in DEMO MODE - skipping database initialization
+2025-07-27 09:41:51.845 | INFO     | ctms.core.logger:info:144 | ✅ API startup completed successfully
+2025-07-27 09:41:59.079 | ERROR    | ctms.core.logger:error:152 | ❌ Sample STIX bundle creation failed: 2 validation errors for STIXMalware
+first_seen
+  Field required [type=missing, input_value={'name': 'Sample Trojan',...: ['trojan', 'malware']}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+last_seen
+  Field required [type=missing, input_value={'name': 'Sample Trojan',...: ['trojan', 'malware']}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:41:59.080 | ERROR    | ctms.core.logger:error:152 | HTTP 500: Sample creation failed: 2 validation errors for STIXMalware
+first_seen
+  Field required [type=missing, input_value={'name': 'Sample Trojan',...: ['trojan', 'malware']}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+last_seen
+  Field required [type=missing, input_value={'name': 'Sample Trojan',...: ['trojan', 'malware']}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:42:45.938 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:42:46.419 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:42:46.419 | INFO     | ctms.core.logger:info:144 | 📋 Running in DEMO MODE - skipping database initialization
+2025-07-27 09:42:46.419 | INFO     | ctms.core.logger:info:144 | ✅ API startup completed successfully
+2025-07-27 09:42:51.420 | ERROR    | ctms.core.logger:error:152 | ❌ Sample STIX bundle creation failed: 5 validation errors for STIXRelationship
+source_ref
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+target_ref
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+start_time
+  Field required [type=missing, input_value={'source_ref': None, 'tar...cates malware presence'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+stop_time
+  Field required [type=missing, input_value={'source_ref': None, 'tar...cates malware presence'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_weight
+  Field required [type=missing, input_value={'source_ref': None, 'tar...cates malware presence'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:42:51.420 | ERROR    | ctms.core.logger:error:152 | HTTP 500: Sample creation failed: 5 validation errors for STIXRelationship
+source_ref
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+target_ref
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+start_time
+  Field required [type=missing, input_value={'source_ref': None, 'tar...cates malware presence'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+stop_time
+  Field required [type=missing, input_value={'source_ref': None, 'tar...cates malware presence'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+x_opencti_weight
+  Field required [type=missing, input_value={'source_ref': None, 'tar...cates malware presence'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-07-27 09:43:21.922 | INFO     | ctms.core.logger:configure:103 | ✅ Logging configured - Level: INFO, File: logs/ctms.log
+2025-07-27 09:43:22.398 | INFO     | ctms.core.logger:info:144 | 🚀 Starting Cyber Threat Monitoring System API
+2025-07-27 09:43:22.398 | INFO     | ctms.core.logger:info:144 | 📋 Running in DEMO MODE - skipping database initialization
+2025-07-27 09:43:22.398 | INFO     | ctms.core.logger:info:144 | ✅ API startup completed successfully
+2025-07-27 09:44:05.330 | INFO     | ctms.core.logger:info:144 | 🔌 Initializing connector: MITRE ATT&CK Connector (enterprise)
+2025-07-27 09:44:05.330 | INFO     | ctms.core.logger:info:144 | 🔌 MITRE connector started: mitre-attack-connector
+2025-07-27 09:44:05.331 | INFO     | ctms.core.logger:info:144 | ▶️ Starting connector: MITRE ATT&CK Connector (enterprise)
+2025-07-27 09:44:05.331 | INFO     | ctms.core.logger:info:144 | 🚀 Initializing connector: MITRE ATT&CK Connector (enterprise)
+2025-07-27 09:44:05.331 | INFO     | ctms.core.logger:info:144 | 🎯 Initializing MITRE ATT&CK connector
+2025-07-27 09:44:05.332 | INFO     | ctms.core.logger:info:144 | ✅ MITRE connector configured for domains: ['enterprise']
+2025-07-27 09:44:05.332 | INFO     | ctms.core.logger:info:144 | ✅ Connector initialized: MITRE ATT&CK Connector (enterprise)
+2025-07-27 09:44:05.332 | INFO     | ctms.core.logger:info:144 | 🔄 Starting work: MITRE ATT&CK Connector (enterprise) run @ 2025-07-27T09:44:05.332394
+2025-07-27 09:44:05.332 | INFO     | ctms.core.logger:info:144 | 🚀 Starting MITRE ATT&CK data import
+2025-07-27 09:44:05.332 | INFO     | ctms.core.logger:info:144 | 📥 Processing MITRE ENTERPRISE domain
+2025-07-27 09:44:05.612 | ERROR    | ctms.core.logger:error:152 | ❌ Error downloading MITRE enterprise data: 200, message='Attempt to decode JSON with unexpected mimetype: text/plain; charset=utf-8', url='https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json'
+2025-07-27 09:44:05.613 | ERROR    | ctms.core.logger:error:152 | Failed to download MITRE enterprise data
+2025-07-27 09:44:05.614 | INFO     | ctms.core.logger:info:144 | ✅ Work completed: MITRE ATT&CK Connector (enterprise) run @ 2025-07-27T09:44:05.332394 - Processed: 0, Errors: 1

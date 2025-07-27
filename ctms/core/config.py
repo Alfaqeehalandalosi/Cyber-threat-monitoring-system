@@ -114,6 +114,11 @@ class Settings(BaseSettings):
     threatcrowd_enabled: bool = Field(default=True, description="Enable ThreatCrowd API")
     
     # =============================================================================
+    # DEMO MODE CONFIGURATION
+    # =============================================================================
+    demo_mode: bool = Field(default=False, description="Enable demo mode without database")
+    
+    # =============================================================================
     # PYDANTIC CONFIGURATION
     # =============================================================================
     class Config:
