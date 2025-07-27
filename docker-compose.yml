@@ -1,0 +1,89 @@
+# =============================================================================
+# CYBER THREAT MONITORING SYSTEM - DOCKER INFRASTRUCTURE
+# =============================================================================
+version: '3.8'
+
+services:
+  # =============================================================================
+  # DATABASE SERVICES
+  # =============================================================================
+  
+  # MongoDB - Primary document database for threat intelligence
+  mongodb:
+    image: mongo:7.0
+    container_name: ctms_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secure_mongo_password
+      MONGO_INITDB_DATABASE: threat_monitoring
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - ctms_network
+
+  # Elasticsearch - Search and analytics engine
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: ctms_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - ctms_network
+
+  # =============================================================================
+  # PROXY SERVICES
+  # =============================================================================
+  
+  # TOR Proxy - Anonymous web scraping
+  tor-proxy:
+    image: dperson/torproxy:latest
+    container_name: ctms_tor_proxy
+    restart: unless-stopped
+    ports:
+      - "8118:8118"  # HTTP proxy
+      - "9050:9050"  # SOCKS proxy
+    networks:
+      - ctms_network
+
+  # =============================================================================
+  # MONITORING SERVICES
+  # =============================================================================
+  
+  # Redis - Caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: ctms_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ctms_network
+
+# =============================================================================
+# NETWORK AND VOLUME CONFIGURATION
+# =============================================================================
+networks:
+  ctms_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  redis_data:
+    driver: local
