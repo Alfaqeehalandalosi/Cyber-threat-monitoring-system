@@ -33,8 +33,16 @@ source venv/bin/activate
 # Check if requirements are installed
 if ! python -c "import fastapi, streamlit, spacy" 2>/dev/null; then
     echo "📦 Installing Python dependencies..."
-    pip install --upgrade pip
-    pip install -r requirements.txt
+    pip install --upgrade pip setuptools wheel
+    
+    # Try macOS-specific requirements first, fall back to main requirements
+    if [ -f "requirements-macos.txt" ]; then
+        echo "Using macOS-optimized requirements..."
+        pip install -r requirements-macos.txt
+    else
+        echo "Using standard requirements..."
+        pip install -r requirements.txt
+    fi
     echo "✅ Dependencies installed"
 fi
 

@@ -88,6 +88,18 @@ lsof -i :8501
 sudo kill -9 <PID>
 ```
 
+### Python Package Issues (cryptography, etc.)?
+```bash
+# Fix dependency issues automatically
+./scripts/fix_dependencies_macos.sh
+
+# Or try manual fix
+source venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install "cryptography>=40.0.0" --no-cache-dir
+pip install -r requirements-macos.txt
+```
+
 ### Need to Reset Everything?
 ```bash
 # Stop all services

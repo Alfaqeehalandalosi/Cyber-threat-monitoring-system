@@ -89,7 +89,16 @@ pip install --upgrade pip
 
 # Install Python dependencies
 echo "📚 Installing Python dependencies..."
-pip install -r requirements.txt
+pip install --upgrade pip setuptools wheel
+
+# Use macOS-optimized requirements if available
+if [ -f "requirements-macos.txt" ]; then
+    echo "Using macOS-optimized requirements..."
+    pip install -r requirements-macos.txt
+else
+    echo "Using standard requirements..."
+    pip install -r requirements.txt
+fi
 
 # Download spaCy model
 echo "🧠 Installing spaCy English model..."
