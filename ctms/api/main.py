@@ -273,10 +273,10 @@ async def create_ioc(
         ioc = IndicatorOfCompromise(**ioc_data)
         
         # Insert into database
-        result = await db.iocs.insert_one(ioc.dict())
+        result = await db.iocs.insert_one(ioc.model_dump())
         
         # Return created IOC
-        created_ioc = ioc.dict()
+        created_ioc = ioc.model_dump()
         created_ioc["_id"] = str(result.inserted_id)
         
         logger.api_request("POST", "/api/v1/iocs", 201)
@@ -400,10 +400,10 @@ async def create_threat(
         threat = ThreatIntelligence(**threat_data)
         
         # Insert into database
-        result = await db.threats.insert_one(threat.dict())
+        result = await db.threats.insert_one(threat.model_dump())
         
         # Return created threat
-        created_threat = threat.dict()
+        created_threat = threat.model_dump()
         created_threat["_id"] = str(result.inserted_id)
         
         logger.api_request("POST", "/api/v1/threats", 201)
@@ -490,10 +490,10 @@ async def create_alert(
         alert = Alert(**alert_data)
         
         # Insert into database
-        result = await db.alerts.insert_one(alert.dict())
+        result = await db.alerts.insert_one(alert.model_dump())
         
         # Return created alert
-        created_alert = alert.dict()
+        created_alert = alert.model_dump()
         created_alert["_id"] = str(result.inserted_id)
         
         logger.api_request("POST", "/api/v1/alerts", 201)
@@ -614,10 +614,10 @@ async def create_scraping_source(
         source = ScrapingSource(**source_data)
         
         # Insert into database
-        result = await db.scraping_sources.insert_one(source.dict())
+        result = await db.scraping_sources.insert_one(source.model_dump())
         
         # Return created source
-        created_source = source.dict()
+        created_source = source.model_dump()
         created_source["_id"] = str(result.inserted_id)
         
         logger.api_request("POST", "/api/v1/scraping/sources", 201)
@@ -702,7 +702,7 @@ async def analyze_content(
         analysis = await analyzer.analyze_content(content)
         
         # Save analysis
-        analysis_doc = analysis.dict()
+        analysis_doc = analysis.model_dump()
         await db.nlp_analysis.insert_one(analysis_doc)
         
         logger.api_request("POST", f"/api/v1/analysis/content/{content_id}", 200)
