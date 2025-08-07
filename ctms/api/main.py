@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import uvicorn
+from pydantic import ValidationError
 
 from ctms.core.config import settings
 from ctms.core.logger import get_logger
@@ -43,6 +44,15 @@ async def lifespan(app: FastAPI):
     try:
         # Initialize databases
         await initialize_databases()
+        
+        # Seed default scraping sources
+        try:
+            from ctms.scraping.default_sources import seed_default_sources
+            await seed_default_sources()
+            logger.info("✅ Seeded default scraping sources (if missing)")
+        except Exception as seed_err:
+            logger.warning(f"⚠️ Seeding default sources skipped/failed: {seed_err}")
+        
         logger.info("✅ API startup completed successfully")
         
         yield
@@ -610,19 +620,27 @@ async def create_scraping_source(
         
         db = await get_database()
         
-        # Create source document
-        source = ScrapingSource(**source_data)
+        # Validate payload to model
+        try:
+            source = ScrapingSource(**source_data)
+        except ValidationError as ve:
+            logger.error(f"❌ Validation error creating scraping source: {ve}")
+            raise HTTPException(status_code=422, detail="Invalid scraping source data")
+        
+        # Prepare document for MongoDB (exclude None, use aliases)
+        source_doc = source.model_dump(by_alias=True, exclude_none=True)
         
         # Insert into database
-        result = await db.scraping_sources.insert_one(source.dict())
+        result = await db.scraping_sources.insert_one(source_doc)
         
-        # Return created source
-        created_source = source.dict()
-        created_source["_id"] = str(result.inserted_id)
+        # Return created source with generated _id
+        source_doc["_id"] = str(result.inserted_id)
         
         logger.api_request("POST", "/api/v1/scraping/sources", 201)
-        return created_source
+        return source_doc
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Failed to create scraping source: {e}")
         raise HTTPException(status_code=500, detail="Failed to create scraping source")
