@@ -704,7 +704,7 @@ class ScrapingOrchestrator:
                     
                     # Save scraped content to database
                     if scraped_content:
-                        content_docs = [content.dict() for content in scraped_content]
+                        content_docs = [content.model_dump() for content in scraped_content]
                         await db.scraped_content.insert_many(content_docs)
                         
                         logger.info(f"💾 Saved {len(scraped_content)} items for {source.name}")

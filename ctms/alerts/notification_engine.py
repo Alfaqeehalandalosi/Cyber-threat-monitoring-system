@@ -869,7 +869,7 @@ class AlertProcessor:
             db = await get_database()
             
             # Insert alert
-            alert_doc = alert.dict()
+            alert_doc = alert.model_dump()
             result = await db.alerts.insert_one(alert_doc)
             
             # Update alert with ID

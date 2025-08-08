@@ -752,7 +752,7 @@ class ThreatAnalyzer:
                     })
                     
                     if not existing:
-                        result = await db.iocs.insert_one(ioc_doc.dict())
+                        result = await db.iocs.insert_one(ioc_doc.model_dump())
                         ioc_ids.append(str(result.inserted_id))
                     else:
                         ioc_ids.append(str(existing["_id"]))
