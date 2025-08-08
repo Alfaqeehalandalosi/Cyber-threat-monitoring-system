@@ -48,6 +48,19 @@ DEFAULT_SOURCES: List[Dict] = [
         "tags": ["investigations", "breaches"]
     },
     {
+        "name": "SecurityWeek",
+        "url": "https://www.securityweek.com",
+        "source_type": SourceType.SURFACE_WEB,
+        "enabled": True,
+        "use_tor": False,
+        "content_selectors": {
+            "title": "h1.entry-title",
+            "content": "div.entry-content"
+        },
+        "scraping_interval": 3600,
+        "tags": ["news", "vulnerabilities", "malware"]
+    },
+    {
         "name": "VX Underground",
         "url": "https://vx-underground.org",
         "source_type": SourceType.SURFACE_WEB,
@@ -69,6 +82,56 @@ DEFAULT_SOURCES: List[Dict] = [
         "content_selectors": {},
         "scraping_interval": 1800,
         "tags": ["community", "threads"]
+    },
+    {
+        "name": "Reddit r/cybersecurity",
+        "url": "https://www.reddit.com/r/cybersecurity",
+        "source_type": SourceType.SURFACE_WEB,
+        "enabled": False,
+        "use_tor": False,
+        "content_selectors": {},
+        "scraping_interval": 1800,
+        "tags": ["community", "threads"]
+    },
+    {
+        "name": "Hack Forums",
+        "url": "https://hackforums.net",
+        "source_type": SourceType.SURFACE_WEB,
+        "enabled": False,
+        "use_tor": False,
+        "content_selectors": {},
+        "scraping_interval": 7200,
+        "tags": ["forum", "hacking"]
+    },
+    {
+        "name": "XSS Forum",
+        "url": "https://xss.is/",
+        "source_type": SourceType.SURFACE_WEB,
+        "enabled": False,
+        "use_tor": False,
+        "content_selectors": {},
+        "scraping_interval": 10800,
+        "tags": ["forum", "hacking"]
+    },
+    {
+        "name": "Exploit.in",
+        "url": "https://exploit.in/",
+        "source_type": SourceType.SURFACE_WEB,
+        "enabled": False,
+        "use_tor": False,
+        "content_selectors": {},
+        "scraping_interval": 10800,
+        "tags": ["forum", "hacking"]
+    },
+    {
+        "name": "BreachForums (placeholder)",
+        "url": "https://breachforums.st/",
+        "source_type": SourceType.SURFACE_WEB,
+        "enabled": False,
+        "use_tor": False,
+        "content_selectors": {},
+        "scraping_interval": 10800,
+        "tags": ["forum", "data_breaches"]
     },
     # Dark web forum placeholders (disabled by default)
     {

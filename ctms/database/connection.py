@@ -461,21 +461,34 @@ class DatabaseManager:
         try:
             logger.info("🚀 Initializing database connections...")
             
-            # Connect to MongoDB
+            # Connect to MongoDB (required)
             await self.mongodb.connect()
             
-            # Connect to Elasticsearch
-            await self.elasticsearch.connect()
+            # Try to connect to Elasticsearch (optional)
+            es_connected = False
+            try:
+                await self.elasticsearch.connect()
+                es_connected = True
+            except Exception as es_err:
+                logger.warning(f"⚠️ Elasticsearch not available: {es_err}")
             
             # Create indexes
-            await self.mongodb.create_indexes()
-            await self.elasticsearch.create_indexes()
+            try:
+                await self.mongodb.create_indexes()
+            except Exception as idx_err:
+                logger.warning(f"⚠️ Failed to create MongoDB indexes: {idx_err}")
+            
+            if es_connected:
+                try:
+                    await self.elasticsearch.create_indexes()
+                except Exception as es_idx_err:
+                    logger.warning(f"⚠️ Failed to create Elasticsearch indexes: {es_idx_err}")
             
             self._initialized = True
-            logger.info("✅ All database connections established")
+            logger.info("✅ Database initialization complete")
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize databases: {e}")
+            logger.error(f"❌ Failed to initialize MongoDB: {e}")
             await self.disconnect()
             raise
     
@@ -497,9 +510,11 @@ class DatabaseManager:
         elasticsearch_health = await self.elasticsearch.health_check()
         
         overall_status = "healthy"
-        if (mongodb_health["status"] != "healthy" or 
-            elasticsearch_health["status"] not in ["green", "yellow"]):
+        if mongodb_health["status"] != "healthy":
             overall_status = "unhealthy"
+        # If Mongo is healthy but ES is red, still report unhealthy to signal degraded state
+        elif elasticsearch_health["status"] not in ["green", "yellow"]:
+            overall_status = "degraded"
         
         return {
             "overall_status": overall_status,
@@ -545,7 +560,16 @@ async def get_database():
     Returns:
         AsyncIOMotorDatabase: Database instance
     """
-    return db_manager.mongodb.database
+    try:
+        return db_manager.mongodb.database
+    except RuntimeError:
+        # Lazy-connect if not initialized
+        try:
+            await db_manager.connect()
+            return db_manager.mongodb.database
+        except Exception as e:
+            logger.error(f"Database not available: {e}")
+            raise
 
 
 async def get_elasticsearch():

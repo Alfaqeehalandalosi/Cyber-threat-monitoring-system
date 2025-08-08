@@ -643,6 +643,9 @@ async def create_scraping_source(
         raise
     except Exception as e:
         logger.error(f"❌ Failed to create scraping source: {e}")
+        # If database connection failed, hint it explicitly
+        if "MongoDB not connected" in str(e) or "Database not available" in str(e):
+            raise HTTPException(status_code=503, detail="Database not available")
         raise HTTPException(status_code=500, detail="Failed to create scraping source")
 
 
