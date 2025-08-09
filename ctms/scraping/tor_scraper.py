@@ -12,6 +12,7 @@ import hashlib
 import time
 import random
 from typing import Optional, Dict, Any, List, Set
+import inspect
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -592,8 +593,9 @@ class ThreatIntelligenceScraper:
             # Calculate success rate
             success_rate = (success_count / total_count) if total_count > 0 else 0.0
             
-            # Update source in database
-            db = await get_database()
+            # Update source in database (support async or sync get_database)
+            db_func = get_database
+            db = await db_func() if inspect.iscoroutinefunction(db_func) else db_func()
             await db.scraping_sources.update_one(
                 {"_id": source.id},
                 {
@@ -682,8 +684,9 @@ class ScrapingOrchestrator:
         cycle_start = datetime.utcnow()
         
         try:
-            # Get all enabled sources
-            db = await get_database()
+            # Get all enabled sources (support async or sync get_database)
+            db_func = get_database
+            db = await db_func() if inspect.iscoroutinefunction(db_func) else db_func()
             sources_cursor = db.scraping_sources.find({"enabled": True})
             sources = []
             async for doc in sources_cursor:
@@ -708,7 +711,7 @@ class ScrapingOrchestrator:
                     
                     # Save scraped content to database
                     if scraped_content:
-                        content_docs = [content.dict() for content in scraped_content]
+                        content_docs = [content.model_dump(by_alias=True, exclude_none=True) for content in scraped_content]
                         await db.scraped_content.insert_many(content_docs)
                         
                         logger.info(f"💾 Saved {len(scraped_content)} items for {source.name}")
