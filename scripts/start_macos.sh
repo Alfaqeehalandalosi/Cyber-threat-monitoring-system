@@ -133,11 +133,19 @@ echo "🚀 Starting API server..."
 python -m ctms.api.main > logs/api.log 2>&1 &
 API_PID=$!
 
+# Load .env to get API_PORT if present
+if [ -f ".env" ]; then
+    set -a
+    . ./.env
+    set +a
+fi
+API_PORT_RUNTIME=${API_PORT:-8000}
+
 # Wait for API to be ready
-echo "⏳ Waiting for API server to start..."
+echo "⏳ Waiting for API server to start on port ${API_PORT_RUNTIME}..."
 sleep 5
 
-if ! check_service "API Server" "http://localhost:8000/health"; then
+if ! check_service "API Server" "http://localhost:${API_PORT_RUNTIME}/health"; then
     echo "❌ API server failed to start. Check logs:"
     echo "   tail -f logs/api.log"
     kill $API_PID 2>/dev/null || true
@@ -148,12 +156,12 @@ fi
 echo ""
 echo "🌐 System URLs:"
 echo "   Dashboard:  http://localhost:8501"
-echo "   API Docs:   http://localhost:8000/docs"
-echo "   API Health: http://localhost:8000/health"
+echo "   API Docs:   http://localhost:${API_PORT_RUNTIME}/docs"
+echo "   API Health: http://localhost:${API_PORT_RUNTIME}/health"
 echo ""
 echo "🔑 Default Login:"
 echo "   Username: admin"
-echo "   Password: admin"
+echo "   Password: admin"}  JSON```}ౖ```
 echo ""
 echo "📊 Starting Streamlit dashboard..."
 echo "   The dashboard will open in your browser automatically"
