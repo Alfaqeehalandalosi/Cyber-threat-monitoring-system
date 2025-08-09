@@ -685,7 +685,11 @@ class ScrapingOrchestrator:
             # Get all enabled sources
             db = await get_database()
             sources_cursor = db.scraping_sources.find({"enabled": True})
-            sources = [ScrapingSource(**doc) async for doc in sources_cursor]
+            sources = []
+            async for doc in sources_cursor:
+                if doc.get("_id") is not None:
+                    doc["_id"] = str(doc["_id"])
+                sources.append(ScrapingSource(**doc))
             
             logger.info(f"📋 Found {len(sources)} enabled sources")
             
