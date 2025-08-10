@@ -119,7 +119,12 @@ def generate_mock_threat_data() -> Dict[str, Any]:
     
     # Threat types with realistic distributions
     threat_types = ['malware', 'phishing', 'apt', 'exploit', 'ransomware', 'ddos', 'data_breach', 'credential_theft']
-    threat_counts = np.random.poisson([15, 12, 3, 8, 5, 6, 4, 7], len(dates))
+    
+    # Fix the shape mismatch by generating counts properly
+    threat_counts = []
+    for _ in range(len(dates)):
+        daily_count = np.random.poisson(10)  # Average 10 threats per day
+        threat_counts.append(daily_count)
     
     # Generate detailed threat data
     threats = []
