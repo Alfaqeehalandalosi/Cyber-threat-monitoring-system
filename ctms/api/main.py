@@ -712,8 +712,10 @@ async def _background_run_scrape(job_id: str) -> Dict[str, Any]:
             # Run full scraping cycle
             scraping_results = await scraper.run_full_cycle()
             
-            # Analyze latest threats
+            # Create analyzer with proper constructor (no args for new API)
             analyzer = ThreatAnalyzer()
+            
+            # Analyze latest threats (this will query DB for unprocessed content)
             analysis_results = await analyzer.analyze_latest_threats()
             
             results = {
@@ -728,6 +730,7 @@ async def _background_run_scrape(job_id: str) -> Dict[str, Any]:
             return results
             
         finally:
+            # Ensure proper cleanup
             await scraper.close()
             
     except Exception as e:

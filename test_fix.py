@@ -41,7 +41,31 @@ async def test_scraper_methods():
             print_status("❌ run_full_cycle method missing from ThreatIntelligenceScraper", "ERROR")
             return False
         
-        # Test 4: Test create_scraper function
+        # Test 4: Check if get_session method exists and is async
+        if hasattr(scraper, 'get_session'):
+            import inspect
+            if inspect.iscoroutinefunction(scraper.get_session):
+                print_status("✅ get_session method exists and is async")
+            else:
+                print_status("❌ get_session method exists but is not async", "ERROR")
+                return False
+        else:
+            print_status("❌ get_session method missing", "ERROR")
+            return False
+        
+        # Test 5: Check if close method exists and is async
+        if hasattr(scraper, 'close'):
+            import inspect
+            if inspect.iscoroutinefunction(scraper.close):
+                print_status("✅ close method exists and is async")
+            else:
+                print_status("❌ close method exists but is not async", "ERROR")
+                return False
+        else:
+            print_status("❌ close method missing", "ERROR")
+            return False
+        
+        # Test 6: Test create_scraper function
         try:
             test_scraper = await create_scraper()
             print_status("✅ create_scraper function works correctly")
@@ -69,15 +93,36 @@ async def test_analyzer_methods():
         from ctms.nlp.threat_analyzer import ThreatAnalyzer
         print_status("✅ Successfully imported ThreatAnalyzer")
         
-        # Test 2: Create analyzer instance
-        analyzer = ThreatAnalyzer()
-        print_status("✅ Successfully created ThreatAnalyzer instance")
+        # Test 2: Create analyzer instance with no args (new API)
+        analyzer_new = ThreatAnalyzer()
+        print_status("✅ Successfully created ThreatAnalyzer instance (new API)")
         
-        # Test 3: Check if analyze_latest_threats method exists
-        if hasattr(analyzer, 'analyze_latest_threats'):
-            print_status("✅ analyze_latest_threats method exists on ThreatAnalyzer")
+        # Test 3: Create analyzer instance with args (old API compatibility)
+        analyzer_old = ThreatAnalyzer(session=None, database_url=None)
+        print_status("✅ Successfully created ThreatAnalyzer instance (old API compatibility)")
+        
+        # Test 4: Check if analyze_latest_threats method exists and is async
+        if hasattr(analyzer_new, 'analyze_latest_threats'):
+            import inspect
+            if inspect.iscoroutinefunction(analyzer_new.analyze_latest_threats):
+                print_status("✅ analyze_latest_threats method exists and is async")
+            else:
+                print_status("❌ analyze_latest_threats method exists but is not async", "ERROR")
+                return False
         else:
-            print_status("❌ analyze_latest_threats method missing from ThreatAnalyzer", "ERROR")
+            print_status("❌ analyze_latest_threats method missing", "ERROR")
+            return False
+        
+        # Test 5: Check if batch_analyze method exists and is async
+        if hasattr(analyzer_new, 'batch_analyze'):
+            import inspect
+            if inspect.iscoroutinefunction(analyzer_new.batch_analyze):
+                print_status("✅ batch_analyze method exists and is async")
+            else:
+                print_status("❌ batch_analyze method exists but is not async", "ERROR")
+                return False
+        else:
+            print_status("❌ batch_analyze method missing", "ERROR")
             return False
         
         return True
@@ -99,9 +144,14 @@ async def test_background_function():
         from ctms.api.main import _background_run_scrape
         print_status("✅ Successfully imported _background_run_scrape function")
         
-        # Test 2: Check if function is callable
+        # Test 2: Check if function is callable and async
         if callable(_background_run_scrape):
-            print_status("✅ _background_run_scrape is callable")
+            import inspect
+            if inspect.iscoroutinefunction(_background_run_scrape):
+                print_status("✅ _background_run_scrape is callable and async")
+            else:
+                print_status("❌ _background_run_scrape is callable but not async", "ERROR")
+                return False
         else:
             print_status("❌ _background_run_scrape is not callable", "ERROR")
             return False
@@ -131,6 +181,13 @@ async def test_api_endpoints():
             print_status("✅ Scraping endpoint exists")
         else:
             print_status("❌ Scraping endpoint missing", "ERROR")
+            return False
+        
+        # Test 3: Check if health endpoint exists
+        if "/health" in routes:
+            print_status("✅ Health endpoint exists")
+        else:
+            print_status("❌ Health endpoint missing", "ERROR")
             return False
         
         return True
@@ -168,6 +225,39 @@ async def test_database_connection():
         traceback.print_exc()
         return False
 
+async def test_model_compatibility():
+    """Test model compatibility and structure."""
+    print_status("Testing model compatibility...")
+    
+    try:
+        # Test 1: Import models
+        from ctms.database.models import ScrapedContent, ThreatAnalyzer as ThreatAnalyzerModel
+        print_status("✅ Successfully imported models")
+        
+        # Test 2: Check ScrapedContent has processed field
+        if hasattr(ScrapedContent, 'processed'):
+            print_status("✅ ScrapedContent has processed field")
+        else:
+            print_status("❌ ScrapedContent missing processed field", "ERROR")
+            return False
+        
+        # Test 3: Check ScrapedContent has url field
+        if hasattr(ScrapedContent, 'url'):
+            print_status("✅ ScrapedContent has url field")
+        else:
+            print_status("❌ ScrapedContent missing url field", "ERROR")
+            return False
+        
+        return True
+        
+    except ImportError as e:
+        print_status(f"❌ Import error: {e}", "ERROR")
+        return False
+    except Exception as e:
+        print_status(f"❌ Unexpected error: {e}", "ERROR")
+        traceback.print_exc()
+        return False
+
 async def run_comprehensive_test():
     """Run all tests to verify the fixes."""
     print_status("=" * 60)
@@ -180,6 +270,7 @@ async def run_comprehensive_test():
         ("Background Function", test_background_function),
         ("API Endpoints", test_api_endpoints),
         ("Database Connection", test_database_connection),
+        ("Model Compatibility", test_model_compatibility),
     ]
     
     results = []
@@ -217,6 +308,7 @@ async def run_comprehensive_test():
         print_status("1. Start services: docker-compose up -d")
         print_status("2. Start API: python -m ctms.api.main")
         print_status("3. Start Dashboard: streamlit run ctms/dashboard/main_dashboard.py")
+        print_status("4. Test scraping: curl -X POST http://localhost:8000/api/v1/scraping/run")
         return True
     else:
         print_status("⚠️ Some tests failed. Please check the errors above.", "WARNING")

@@ -754,11 +754,21 @@ class ThreatAnalyzer:
     for comprehensive threat intelligence analysis.
     """
     
-    def __init__(self):
-        """Initialize threat analyzer."""
+    def __init__(self, session=None, database_url=None):
+        """
+        Initialize threat analyzer.
+        
+        Args:
+            session: Optional session object (for backward compatibility)
+            database_url: Optional database URL (for backward compatibility)
+        """
         self.classifier = ThreatClassifier()
         self.ioc_extractor = IOCExtractor()
         self.entity_extractor = EntityExtractor()
+        
+        # Store session and database_url for backward compatibility
+        self.session = session
+        self.database_url = database_url
         
         logger.info("🧠 Threat analyzer initialized")
     
@@ -855,7 +865,7 @@ class ThreatAnalyzer:
         try:
             db = await get_database()
             
-            # Update content with analysis reference
+            # Update content with analysis reference and mark as processed
             await db.scraped_content.update_one(
                 {"_id": content.id},
                 {
@@ -863,7 +873,8 @@ class ThreatAnalyzer:
                         "analysis_id": str(analysis.id),
                         "threat_score": analysis.classification["primary_threat"],
                         "severity": analysis.classification["severity"],
-                        "analyzed_at": datetime.utcnow()
+                        "analyzed_at": datetime.utcnow(),
+                        "processed": True  # Mark as processed
                     }
                 }
             )
@@ -979,9 +990,9 @@ class ThreatAnalyzer:
         try:
             db = await get_database()
             
-            # Get latest unanalyzed content
+            # Get latest unprocessed content (processed == False)
             latest_content = await db.scraped_content.find(
-                {"analysis_id": {"$exists": False}},
+                {"processed": False},  # Query for unprocessed content
                 sort=[("scraped_at", -1)],
                 limit=50
             ).to_list(length=50)
@@ -997,7 +1008,7 @@ class ThreatAnalyzer:
             # Convert to ScrapedContent objects
             content_objects = [ScrapedContent(**doc) for doc in latest_content]
             
-            # Analyze content
+            # Analyze content using batch_analyze
             analyses = await self.batch_analyze(content_objects)
             
             logger.info(f"✅ Analyzed {len(analyses)} latest threats")

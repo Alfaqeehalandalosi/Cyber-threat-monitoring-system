@@ -297,6 +297,17 @@ class ThreatIntelligenceScraper:
         self.session = await self.tor_manager.create_session()
         logger.info("🔧 Threat intelligence scraper initialized")
     
+    async def get_session(self) -> aiohttp.ClientSession:
+        """
+        Get or create a session.
+        
+        Returns:
+            aiohttp.ClientSession: Session instance
+        """
+        if not self.session or self.session.closed:
+            await self.initialize()
+        return self.session
+    
     async def scrape_url(
         self,
         url: str,
@@ -314,8 +325,7 @@ class ThreatIntelligenceScraper:
         Returns:
             Optional[ScrapedContent]: Scraped content
         """
-        if not self.session:
-            await self.initialize()
+        session = await self.get_session()
         
         try:
             # Apply rate limiting
@@ -327,7 +337,7 @@ class ThreatIntelligenceScraper:
                 headers.update(custom_headers)
             
             # Make request
-            async with self.session.get(url, headers=headers, ssl=False) as response:
+            async with session.get(url, headers=headers, ssl=False) as response:
                 if response.status == 200:
                     html_content = await response.text()
                     
@@ -454,10 +464,11 @@ class ThreatIntelligenceScraper:
             List[str]: List of discovered URLs
         """
         discovered_urls = []
+        session = await self.get_session()
         
         for base_url in source.base_urls[:3]:  # Limit crawling to first 3 base URLs
             try:
-                async with self.session.get(base_url, ssl=False) as response:
+                async with session.get(base_url, ssl=False) as response:
                     if response.status == 200:
                         html = await response.text()
                         soup = BeautifulSoup(html, 'html.parser')
@@ -564,6 +575,8 @@ class ThreatIntelligenceScraper:
     
     async def close(self) -> None:
         """Close scraper and cleanup resources."""
+        if self.session and not self.session.closed:
+            await self.session.close()
         await self.tor_manager.close()
         logger.info("🛑 Threat intelligence scraper closed")
 
