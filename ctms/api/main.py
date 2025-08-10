@@ -23,6 +23,9 @@ from ctms.database.models import (
     ScrapedContent, User, ThreatType, SeverityLevel, AlertStatus
 )
 
+# Import new NLP endpoints
+from ctms.api.nlp_endpoints import router as nlp_router
+
 logger = get_logger(__name__)
 
 # Security
@@ -78,6 +81,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include NLP endpoints
+app.include_router(nlp_router, prefix="/api/v1", tags=["NLP Analysis"])
 
 
 # =============================================================================
