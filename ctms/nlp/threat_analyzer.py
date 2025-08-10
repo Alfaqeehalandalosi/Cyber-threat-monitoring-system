@@ -103,164 +103,146 @@ class ThreatKeywords:
     }
     
     CRYPTO_KEYWORDS = {
-        'cryptocurrency', 'bitcoin', 'monero', 'ethereum', 'mining', 'cryptojacking',
-        'wallet', 'blockchain', 'ransom payment', 'crypto theft'
+        'cryptocurrency', 'bitcoin', 'ethereum', 'monero', 'crypto mining',
+        'cryptojacking', 'crypto wallet', 'blockchain', 'smart contract'
     }
 
 
 # =============================================================================
-# THREAT CLASSIFICATION ENGINE
+# THREAT CLASSIFIER
 # =============================================================================
 class ThreatClassifier:
     """
-    Machine learning-based threat classification engine.
-    Analyzes content and assigns threat types and severity levels.
+    Classifies content based on threat keywords and patterns.
+    Provides threat scoring and severity assessment.
     """
     
     def __init__(self):
         """Initialize threat classifier."""
         self.threat_keywords = ThreatKeywords()
-        self.severity_weights = {
-            'critical': ['zero-day', 'exploit', 'ransomware', 'apt', 'breach'],
-            'high': ['malware', 'trojan', 'vulnerability', 'phishing', 'botnet'],
-            'medium': ['suspicious', 'anomaly', 'indicator', 'threat'],
-            'low': ['information', 'advisory', 'notice', 'recommendation']
-        }
+        logger.info("🎯 Threat classifier initialized")
     
     def classify_content(self, content: str, title: str = "") -> Dict[str, Any]:
         """
-        Classify content for threat types and severity.
+        Classify content for threat types and calculate scores.
         
         Args:
-            content: Text content to analyze
+            content: Content to classify
             title: Optional title for additional context
             
         Returns:
             Dict[str, Any]: Classification results
         """
-        text = f"{title} {content}".lower()
+        # Combine content and title for analysis
+        full_text = f"{title} {content}".lower()
         
-        # Calculate threat type scores
-        threat_scores = {}
+        # Calculate threat scores for each category
+        threat_scores = {
+            'malware': self._calculate_keyword_score(full_text, self.threat_keywords.MALWARE_KEYWORDS),
+            'phishing': self._calculate_keyword_score(full_text, self.threat_keywords.PHISHING_KEYWORDS),
+            'exploit': self._calculate_keyword_score(full_text, self.threat_keywords.EXPLOIT_KEYWORDS),
+            'apt': self._calculate_keyword_score(full_text, self.threat_keywords.APT_KEYWORDS),
+            'network': self._calculate_keyword_score(full_text, self.threat_keywords.NETWORK_KEYWORDS),
+            'crypto': self._calculate_keyword_score(full_text, self.threat_keywords.CRYPTO_KEYWORDS)
+        }
         
-        # Malware detection
-        malware_score = self._calculate_keyword_score(text, self.threat_keywords.MALWARE_KEYWORDS)
-        if malware_score > 0:
-            threat_scores[ThreatType.MALWARE] = malware_score
-        
-        # Phishing detection
-        phishing_score = self._calculate_keyword_score(text, self.threat_keywords.PHISHING_KEYWORDS)
-        if phishing_score > 0:
-            threat_scores[ThreatType.PHISHING] = phishing_score
-        
-        # Exploit detection
-        exploit_score = self._calculate_keyword_score(text, self.threat_keywords.EXPLOIT_KEYWORDS)
-        if exploit_score > 0:
-            threat_scores[ThreatType.EXPLOIT] = exploit_score
-        
-        # APT detection
-        apt_score = self._calculate_keyword_score(text, self.threat_keywords.APT_KEYWORDS)
-        if apt_score > 0:
-            threat_scores[ThreatType.APT] = apt_score
-        
-        # Botnet detection
-        network_score = self._calculate_keyword_score(text, self.threat_keywords.NETWORK_KEYWORDS)
-        if network_score > 0:
-            threat_scores[ThreatType.BOTNET] = network_score
-        
-        # Determine primary threat type
-        primary_threat = ThreatType.UNKNOWN
-        if threat_scores:
-            primary_threat = max(threat_scores.keys(), key=lambda k: threat_scores[k])
+        # Find primary threat type
+        primary_threat_type = max(threat_scores.items(), key=lambda x: x[1])[0]
+        threat_score = threat_scores[primary_threat_type]
         
         # Calculate severity
-        severity = self._calculate_severity(text, threat_scores)
-        
-        # Calculate overall threat score (0-10)
-        threat_score = min(10.0, sum(threat_scores.values()) * 2)
+        severity = self._calculate_severity(full_text, threat_scores)
         
         # Calculate confidence
-        confidence = self._calculate_confidence(threat_scores, text)
+        confidence = self._calculate_confidence(threat_scores, full_text)
+        
+        # Extract found keywords
+        keywords_found = self._extract_found_keywords(full_text)
         
         return {
-            "primary_threat_type": primary_threat,
+            "primary_threat_type": primary_threat_type,
+            "threat_score": threat_score,
             "threat_scores": threat_scores,
             "severity": severity,
-            "threat_score": threat_score,
             "confidence": confidence,
-            "keywords_found": self._extract_found_keywords(text)
+            "keywords_found": keywords_found
         }
     
     def _calculate_keyword_score(self, text: str, keywords: Set[str]) -> float:
-        """Calculate score based on keyword presence and frequency."""
-        score = 0.0
-        found_keywords = []
+        """
+        Calculate threat score based on keyword matches.
         
-        for keyword in keywords:
-            if keyword in text:
-                # Count occurrences
-                count = text.count(keyword)
-                # Weight by keyword length (longer keywords are more specific)
-                weight = len(keyword.split()) * 0.5 + 1
-                score += count * weight
-                found_keywords.append(keyword)
+        Args:
+            text: Text to analyze
+            keywords: Set of threat keywords
+            
+        Returns:
+            float: Threat score (0.0 to 1.0)
+        """
+        matches = sum(1 for keyword in keywords if keyword in text)
+        total_keywords = len(keywords)
         
-        # Normalize score
-        if found_keywords:
-            score = min(score / len(keywords), 1.0)
+        if total_keywords == 0:
+            return 0.0
         
-        return score
+        # Normalize score and apply logarithmic scaling
+        base_score = matches / total_keywords
+        return min(1.0, base_score * 10)  # Scale up for better sensitivity
     
     def _calculate_severity(self, text: str, threat_scores: Dict[str, float]) -> SeverityLevel:
-        """Calculate severity level based on content analysis."""
-        severity_score = 0.0
+        """
+        Calculate threat severity level.
         
-        # Check severity indicators
-        for severity, keywords in self.severity_weights.items():
-            for keyword in keywords:
-                if keyword in text:
-                    if severity == 'critical':
-                        severity_score += 4
-                    elif severity == 'high':
-                        severity_score += 3
-                    elif severity == 'medium':
-                        severity_score += 2
-                    else:
-                        severity_score += 1
-        
-        # Factor in threat scores
-        if threat_scores:
-            max_threat_score = max(threat_scores.values())
-            severity_score += max_threat_score * 5
-        
-        # Map to severity levels
-        if severity_score >= 7:
-            return SeverityLevel.CRITICAL
-        elif severity_score >= 5:
-            return SeverityLevel.HIGH
-        elif severity_score >= 3:
-            return SeverityLevel.MEDIUM
-        else:
-            return SeverityLevel.LOW
-    
-    def _calculate_confidence(self, threat_scores: Dict[str, float], text: str) -> float:
-        """Calculate confidence in the classification."""
-        if not threat_scores:
-            return 0.1
-        
-        # Base confidence on number of different threat indicators
-        indicator_diversity = len(threat_scores)
+        Args:
+            text: Text content
+            threat_scores: Threat scores by category
+            
+        Returns:
+            SeverityLevel: Calculated severity
+        """
         max_score = max(threat_scores.values())
         
-        # Higher confidence for multiple indicators and higher scores
-        confidence = min(0.9, (indicator_diversity * 0.2) + (max_score * 0.6) + 0.1)
+        if max_score >= 0.8:
+            return SeverityLevel.CRITICAL
+        elif max_score >= 0.6:
+            return SeverityLevel.HIGH
+        elif max_score >= 0.4:
+            return SeverityLevel.MEDIUM
+        elif max_score >= 0.2:
+            return SeverityLevel.LOW
+        else:
+            return SeverityLevel.INFO
+    
+    def _calculate_confidence(self, threat_scores: Dict[str, float], text: str) -> float:
+        """
+        Calculate confidence in the threat assessment.
         
-        return confidence
+        Args:
+            threat_scores: Threat scores by category
+            text: Text content
+            
+        Returns:
+            float: Confidence score (0.0 to 1.0)
+        """
+        max_score = max(threat_scores.values())
+        text_length = len(text)
+        
+        # Base confidence on score and text length
+        score_confidence = max_score
+        length_confidence = min(1.0, text_length / 1000)  # More text = higher confidence
+        
+        return (score_confidence + length_confidence) / 2
     
     def _extract_found_keywords(self, text: str) -> List[str]:
-        """Extract all threat-related keywords found in text."""
-        found_keywords = []
+        """
+        Extract all found threat keywords from text.
         
+        Args:
+            text: Text to search
+            
+        Returns:
+            List[str]: Found keywords
+        """
         all_keywords = (
             self.threat_keywords.MALWARE_KEYWORDS |
             self.threat_keywords.PHISHING_KEYWORDS |
@@ -270,63 +252,27 @@ class ThreatClassifier:
             self.threat_keywords.CRYPTO_KEYWORDS
         )
         
-        for keyword in all_keywords:
-            if keyword in text:
-                found_keywords.append(keyword)
-        
-        return found_keywords
+        found = [keyword for keyword in all_keywords if keyword in text.lower()]
+        return list(set(found))  # Remove duplicates
 
 
 # =============================================================================
-# IOC EXTRACTOR ENGINE
+# IOC EXTRACTOR
 # =============================================================================
 class IOCExtractor:
     """
-    Extracts indicators of compromise from text content using
-    pattern matching and validation techniques.
+    Extracts indicators of compromise from text content.
+    Uses regex patterns and validation for accurate IOC detection.
     """
     
     def __init__(self):
         """Initialize IOC extractor."""
         self.patterns = IOCPatterns()
-        
-        # Compile regex patterns for efficiency
-        self.compiled_patterns = {
-            IndicatorType.IP_ADDRESS: [
-                re.compile(self.patterns.IPV4_PATTERN),
-                re.compile(self.patterns.IPV6_PATTERN)
-            ],
-            IndicatorType.DOMAIN: [re.compile(self.patterns.DOMAIN_PATTERN)],
-            IndicatorType.URL: [re.compile(self.patterns.URL_PATTERN)],
-            IndicatorType.FILE_HASH: [
-                re.compile(self.patterns.MD5_PATTERN),
-                re.compile(self.patterns.SHA1_PATTERN),
-                re.compile(self.patterns.SHA256_PATTERN),
-                re.compile(self.patterns.SHA512_PATTERN)
-            ],
-            IndicatorType.EMAIL: [re.compile(self.patterns.EMAIL_PATTERN)],
-            IndicatorType.FILE_PATH: [
-                re.compile(self.patterns.WINDOWS_PATH_PATTERN),
-                re.compile(self.patterns.UNIX_PATH_PATTERN)
-            ],
-            IndicatorType.REGISTRY_KEY: [re.compile(self.patterns.REGISTRY_PATTERN)]
-        }
-        
-        # Common false positive patterns to exclude
-        self.false_positive_patterns = {
-            IndicatorType.IP_ADDRESS: [
-                r'^0\.0\.0\.0$', r'^127\.0\.0\.1$', r'^255\.255\.255\.255$',
-                r'^192\.168\.', r'^10\.', r'^172\.(1[6-9]|2[0-9]|3[0-1])\.'
-            ],
-            IndicatorType.DOMAIN: [
-                r'^localhost$', r'^example\.(com|org|net)$', r'^test\.',
-                r'\.local$', r'\.internal$'
-            ]
-        }
+        logger.info("🔍 IOC extractor initialized")
     
     def extract_iocs(self, content: str) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Extract all IOCs from content.
+        Extract all types of IOCs from content.
         
         Args:
             content: Text content to analyze
@@ -334,103 +280,230 @@ class IOCExtractor:
         Returns:
             Dict[str, List[Dict[str, Any]]]: Extracted IOCs by type
         """
-        extracted_iocs = defaultdict(list)
+        iocs = {
+            'ip_addresses': [],
+            'domains': [],
+            'urls': [],
+            'hashes': [],
+            'emails': [],
+            'file_paths': [],
+            'registry_keys': [],
+            'bitcoin_addresses': []
+        }
         
-        for ioc_type, patterns in self.compiled_patterns.items():
-            for pattern in patterns:
-                matches = pattern.finditer(content)
-                
-                for match in matches:
-                    ioc_value = match.group().strip()
-                    
-                    # Validate and filter false positives
-                    if self._is_valid_ioc(ioc_value, ioc_type):
-                        ioc_info = {
-                            "value": ioc_value,
-                            "type": ioc_type,
-                            "position": match.span(),
-                            "context": self._extract_context(content, match.span()),
-                            "confidence": self._calculate_ioc_confidence(ioc_value, ioc_type)
-                        }
-                        extracted_iocs[ioc_type].append(ioc_info)
+        # Extract IPv4 addresses
+        ipv4_matches = re.finditer(self.patterns.IPV4_PATTERN, content)
+        for match in ipv4_matches:
+            ip = match.group()
+            if self._is_valid_ioc(ip, IndicatorType.IP_ADDRESS):
+                iocs['ip_addresses'].append({
+                    'value': ip,
+                    'type': 'ipv4',
+                    'position': match.span(),
+                    'context': self._extract_context(content, match.span()),
+                    'confidence': self._calculate_ioc_confidence(ip, IndicatorType.IP_ADDRESS)
+                })
         
-        # Remove duplicates
-        for ioc_type in extracted_iocs:
-            extracted_iocs[ioc_type] = self._deduplicate_iocs(extracted_iocs[ioc_type])
+        # Extract domains
+        domain_matches = re.finditer(self.patterns.DOMAIN_PATTERN, content)
+        for match in domain_matches:
+            domain = match.group()
+            if self._is_valid_ioc(domain, IndicatorType.DOMAIN):
+                iocs['domains'].append({
+                    'value': domain,
+                    'type': 'domain',
+                    'position': match.span(),
+                    'context': self._extract_context(content, match.span()),
+                    'confidence': self._calculate_ioc_confidence(domain, IndicatorType.DOMAIN)
+                })
         
-        return dict(extracted_iocs)
+        # Extract URLs
+        url_matches = re.finditer(self.patterns.URL_PATTERN, content)
+        for match in url_matches:
+            url = match.group()
+            if self._is_valid_ioc(url, IndicatorType.URL):
+                iocs['urls'].append({
+                    'value': url,
+                    'type': 'url',
+                    'position': match.span(),
+                    'context': self._extract_context(content, match.span()),
+                    'confidence': self._calculate_ioc_confidence(url, IndicatorType.URL)
+                })
+        
+        # Extract hashes
+        for hash_pattern, hash_type in [
+            (self.patterns.MD5_PATTERN, 'md5'),
+            (self.patterns.SHA1_PATTERN, 'sha1'),
+            (self.patterns.SHA256_PATTERN, 'sha256'),
+            (self.patterns.SHA512_PATTERN, 'sha512')
+        ]:
+            hash_matches = re.finditer(hash_pattern, content)
+            for match in hash_matches:
+                hash_value = match.group()
+                if self._is_valid_ioc(hash_value, IndicatorType.HASH):
+                    iocs['hashes'].append({
+                        'value': hash_value,
+                        'type': hash_type,
+                        'position': match.span(),
+                        'context': self._extract_context(content, match.span()),
+                        'confidence': self._calculate_ioc_confidence(hash_value, IndicatorType.HASH)
+                    })
+        
+        # Extract emails
+        email_matches = re.finditer(self.patterns.EMAIL_PATTERN, content)
+        for match in email_matches:
+            email = match.group()
+            if self._is_valid_ioc(email, IndicatorType.EMAIL):
+                iocs['emails'].append({
+                    'value': email,
+                    'type': 'email',
+                    'position': match.span(),
+                    'context': self._extract_context(content, match.span()),
+                    'confidence': self._calculate_ioc_confidence(email, IndicatorType.EMAIL)
+                })
+        
+        # Extract file paths
+        for path_pattern, path_type in [
+            (self.patterns.WINDOWS_PATH_PATTERN, 'windows_path'),
+            (self.patterns.UNIX_PATH_PATTERN, 'unix_path')
+        ]:
+            path_matches = re.finditer(path_pattern, content)
+            for match in path_matches:
+                path = match.group()
+                iocs['file_paths'].append({
+                    'value': path,
+                    'type': path_type,
+                    'position': match.span(),
+                    'context': self._extract_context(content, match.span()),
+                    'confidence': 0.8  # High confidence for well-formed paths
+                })
+        
+        # Extract registry keys
+        registry_matches = re.finditer(self.patterns.REGISTRY_PATTERN, content)
+        for match in registry_matches:
+            registry = match.group()
+            iocs['registry_keys'].append({
+                'value': registry,
+                'type': 'registry_key',
+                'position': match.span(),
+                'context': self._extract_context(content, match.span()),
+                'confidence': 0.9  # High confidence for registry patterns
+            })
+        
+        # Extract Bitcoin addresses
+        bitcoin_matches = re.finditer(self.patterns.BITCOIN_PATTERN, content)
+        for match in bitcoin_matches:
+            bitcoin = match.group()
+            iocs['bitcoin_addresses'].append({
+                'value': bitcoin,
+                'type': 'bitcoin_address',
+                'position': match.span(),
+                'context': self._extract_context(content, match.span()),
+                'confidence': 0.7  # Medium confidence for Bitcoin addresses
+            })
+        
+        # Remove duplicates and filter by confidence
+        for ioc_type in iocs:
+            iocs[ioc_type] = self._deduplicate_iocs(iocs[ioc_type])
+            iocs[ioc_type] = [ioc for ioc in iocs[ioc_type] if ioc['confidence'] > 0.3]
+        
+        return iocs
     
     def _is_valid_ioc(self, value: str, ioc_type: IndicatorType) -> bool:
         """
-        Validate IOC and filter false positives.
+        Validate IOC value based on type.
         
         Args:
             value: IOC value to validate
             ioc_type: Type of IOC
             
         Returns:
-            bool: True if valid IOC
+            bool: True if valid
         """
-        # Check against false positive patterns
-        if ioc_type in self.false_positive_patterns:
-            for fp_pattern in self.false_positive_patterns[ioc_type]:
-                if re.match(fp_pattern, value):
-                    return False
+        if not value or len(value.strip()) == 0:
+            return False
         
-        # Additional validation by type
-        if ioc_type == IndicatorType.IP_ADDRESS:
-            return self._validate_ip_address(value)
-        elif ioc_type == IndicatorType.DOMAIN:
-            return self._validate_domain(value)
-        elif ioc_type == IndicatorType.FILE_HASH:
-            return self._validate_hash(value)
-        elif ioc_type == IndicatorType.EMAIL:
-            return self._validate_email(value)
-        
-        return True
+        try:
+            if ioc_type == IndicatorType.IP_ADDRESS:
+                return self._validate_ip_address(value)
+            elif ioc_type == IndicatorType.DOMAIN:
+                return self._validate_domain(value)
+            elif ioc_type == IndicatorType.HASH:
+                return self._validate_hash(value)
+            elif ioc_type == IndicatorType.EMAIL:
+                return self._validate_email(value)
+            else:
+                return True
+        except Exception:
+            return False
     
     def _validate_ip_address(self, ip: str) -> bool:
-        """Validate IP address format and ranges."""
+        """
+        Validate IP address format and range.
+        
+        Args:
+            ip: IP address to validate
+            
+        Returns:
+            bool: True if valid
+        """
         try:
             parts = ip.split('.')
             if len(parts) != 4:
                 return False
             
             for part in parts:
+                if not part.isdigit():
+                    return False
                 num = int(part)
                 if num < 0 or num > 255:
                     return False
             
-            # Exclude broadcast and reserved ranges
-            if ip.startswith('0.') or ip.startswith('255.'):
+            # Filter out private IP ranges
+            if ip.startswith(('10.', '192.168.', '172.')):
                 return False
             
             return True
-        except ValueError:
+        except Exception:
             return False
     
     def _validate_domain(self, domain: str) -> bool:
-        """Validate domain name format."""
-        if len(domain) > 253 or len(domain) < 4:
-            return False
+        """
+        Validate domain format.
         
-        # Check for valid characters
-        if not re.match(r'^[a-zA-Z0-9.-]+$', domain):
+        Args:
+            domain: Domain to validate
+            
+        Returns:
+            bool: True if valid
+        """
+        try:
+            # Basic domain validation
+            if len(domain) < 3 or len(domain) > 253:
+                return False
+            
+            # Check for valid TLD
+            valid_tlds = {'.com', '.org', '.net', '.edu', '.gov', '.mil', '.int', '.io', '.co', '.uk', '.de', '.fr', '.jp', '.cn', '.ru'}
+            has_valid_tld = any(domain.endswith(tld) for tld in valid_tlds)
+            
+            # Check for suspicious patterns
+            suspicious_patterns = ['malware', 'virus', 'trojan', 'hack', 'crack', 'warez']
+            has_suspicious = any(pattern in domain.lower() for pattern in suspicious_patterns)
+            
+            return has_valid_tld and not has_suspicious
+        except Exception:
             return False
-        
-        # Must have at least one dot
-        if '.' not in domain:
-            return False
-        
-        # Check TLD
-        tld = domain.split('.')[-1]
-        if len(tld) < 2 or not tld.isalpha():
-            return False
-        
-        return True
     
     def _validate_hash(self, hash_value: str) -> bool:
-        """Validate hash format."""
+        """
+        Validate hash format.
+        
+        Args:
+            hash_value: Hash to validate
+            
+        Returns:
+            bool: True if valid
+        """
         # Check if it's a valid hex string
         try:
             int(hash_value, 16)
@@ -439,18 +512,40 @@ class IOCExtractor:
             return False
     
     def _validate_email(self, email: str) -> bool:
-        """Validate email format."""
-        if '@' not in email or email.count('@') != 1:
-            return False
+        """
+        Validate email format.
         
-        local, domain = email.split('@')
-        if not local or not domain:
+        Args:
+            email: Email to validate
+            
+        Returns:
+            bool: True if valid
+        """
+        try:
+            # Basic email validation
+            if '@' not in email or '.' not in email:
+                return False
+            
+            local, domain = email.split('@', 1)
+            if len(local) < 1 or len(domain) < 3:
+                return False
+            
+            return True
+        except Exception:
             return False
-        
-        return self._validate_domain(domain)
     
     def _extract_context(self, content: str, position: Tuple[int, int], context_size: int = 50) -> str:
-        """Extract context around IOC position."""
+        """
+        Extract context around IOC position.
+        
+        Args:
+            content: Full content
+            position: IOC position (start, end)
+            context_size: Number of characters around IOC
+            
+        Returns:
+            str: Context string
+        """
         start, end = position
         context_start = max(0, start - context_size)
         context_end = min(len(content), end + context_size)
@@ -458,64 +553,78 @@ class IOCExtractor:
         return content[context_start:context_end].strip()
     
     def _calculate_ioc_confidence(self, value: str, ioc_type: IndicatorType) -> float:
-        """Calculate confidence score for extracted IOC."""
-        confidence = 0.7  # Base confidence
+        """
+        Calculate confidence score for IOC.
+        
+        Args:
+            value: IOC value
+            ioc_type: Type of IOC
+            
+        Returns:
+            float: Confidence score (0.0 to 1.0)
+        """
+        base_confidence = 0.8
         
         # Adjust based on IOC type
-        if ioc_type == IndicatorType.FILE_HASH:
-            confidence = 0.95  # Hashes are very reliable
-        elif ioc_type == IndicatorType.IP_ADDRESS:
-            confidence = 0.8
+        if ioc_type == IndicatorType.IP_ADDRESS:
+            if self._validate_ip_address(value):
+                return 0.9
         elif ioc_type == IndicatorType.DOMAIN:
-            # Lower confidence for common domains
-            if any(common in value for common in ['google', 'microsoft', 'apple']):
-                confidence = 0.4
+            if self._validate_domain(value):
+                return 0.8
+        elif ioc_type == IndicatorType.HASH:
+            if self._validate_hash(value):
+                return 0.95
+        elif ioc_type == IndicatorType.EMAIL:
+            if self._validate_email(value):
+                return 0.85
         
-        return confidence
+        return base_confidence
     
     def _deduplicate_iocs(self, iocs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Remove duplicate IOCs."""
+        """
+        Remove duplicate IOCs based on value.
+        
+        Args:
+            iocs: List of IOC dictionaries
+            
+        Returns:
+            List[Dict[str, Any]]: Deduplicated IOCs
+        """
         seen = set()
         unique_iocs = []
         
         for ioc in iocs:
-            if ioc["value"] not in seen:
-                seen.add(ioc["value"])
+            if ioc['value'] not in seen:
+                seen.add(ioc['value'])
                 unique_iocs.append(ioc)
         
         return unique_iocs
 
 
 # =============================================================================
-# ENTITY EXTRACTION ENGINE
+# ENTITY EXTRACTOR
 # =============================================================================
 class EntityExtractor:
     """
-    Extracts named entities and security-relevant information
-    using spaCy NLP models.
+    Extracts named entities and security-relevant information from text.
+    Uses spaCy for advanced NLP processing.
     """
     
     def __init__(self):
         """Initialize entity extractor."""
         try:
-            # Load spaCy model (use English model)
             self.nlp = spacy.load("en_core_web_sm")
-            logger.info("✅ spaCy model loaded successfully")
-        except IOError:
-            logger.warning("⚠️ spaCy model not found, using blank model")
-            self.nlp = spacy.blank("en")
+        except OSError:
+            # Fallback to basic English model
+            self.nlp = spacy.load("en_core_web_sm", disable=["ner"])
+            logger.warning("⚠️ Using basic spaCy model (NER disabled)")
         
-        # Custom entity patterns for security context
-        self.security_patterns = {
-            "CVE": r'CVE-\d{4}-\d{4,}',
-            "PORT": r'\b(?:port\s+)?(\d{1,5})\b',
-            "PROTOCOL": r'\b(tcp|udp|http|https|ftp|ssh|telnet|smtp|dns)\b',
-            "OS": r'\b(windows|linux|macos|ubuntu|centos|debian|android|ios)\b'
-        }
+        logger.info("🏷️ Entity extractor initialized")
     
     def extract_entities(self, content: str) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Extract named entities and security-relevant information.
+        Extract named entities from content.
         
         Args:
             content: Text content to analyze
@@ -523,7 +632,13 @@ class EntityExtractor:
         Returns:
             Dict[str, List[Dict[str, Any]]]: Extracted entities by type
         """
-        entities = defaultdict(list)
+        entities = {
+            'organizations': [],
+            'persons': [],
+            'locations': [],
+            'dates': [],
+            'security_entities': []
+        }
         
         try:
             # Process with spaCy
@@ -532,79 +647,102 @@ class EntityExtractor:
             # Extract standard named entities
             for ent in doc.ents:
                 entity_info = {
-                    "text": ent.text,
-                    "label": ent.label_,
-                    "description": spacy.explain(ent.label_),
-                    "start": ent.start_char,
-                    "end": ent.end_char,
-                    "confidence": 0.8  # Default confidence for spaCy entities
+                    'text': ent.text,
+                    'label': ent.label_,
+                    'start': ent.start_char,
+                    'end': ent.end_char,
+                    'confidence': 0.8
                 }
-                entities[ent.label_].append(entity_info)
-            
-            # Extract custom security entities
-            security_entities = self._extract_security_entities(content)
-            for entity_type, entity_list in security_entities.items():
-                entities[entity_type].extend(entity_list)
-            
-            # Extract keywords and noun phrases
-            keywords = self._extract_keywords(doc)
-            if keywords:
-                entities["KEYWORDS"] = keywords
                 
+                if ent.label_ == 'ORG':
+                    entities['organizations'].append(entity_info)
+                elif ent.label_ == 'PERSON':
+                    entities['persons'].append(entity_info)
+                elif ent.label_ == 'GPE' or ent.label_ == 'LOC':
+                    entities['locations'].append(entity_info)
+                elif ent.label_ == 'DATE':
+                    entities['dates'].append(entity_info)
+            
+            # Extract security-specific entities
+            security_entities = self._extract_security_entities(content)
+            entities['security_entities'] = security_entities
+            
+            # Extract keywords
+            keywords = self._extract_keywords(doc)
+            entities['keywords'] = keywords
+            
         except Exception as e:
             logger.error(f"❌ Entity extraction failed: {e}")
         
-        return dict(entities)
+        return entities
     
-    def _extract_security_entities(self, content: str) -> Dict[str, List[Dict[str, Any]]]:
-        """Extract security-specific entities."""
-        entities = defaultdict(list)
+    def _extract_security_entities(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Extract security-specific entities and terms.
         
-        for entity_type, pattern in self.security_patterns.items():
-            matches = re.finditer(pattern, content, re.IGNORECASE)
+        Args:
+            content: Text content
             
-            for match in matches:
-                entity_info = {
-                    "text": match.group(),
-                    "label": entity_type,
-                    "start": match.start(),
-                    "end": match.end(),
-                    "confidence": 0.9
-                }
-                entities[entity_type].append(entity_info)
+        Returns:
+            List[Dict[str, Any]]: Security entities
+        """
+        security_terms = [
+            'malware', 'virus', 'trojan', 'ransomware', 'phishing', 'apt',
+            'exploit', 'vulnerability', 'zero-day', 'cve', 'mitre', 'att&ck',
+            'firewall', 'ids', 'ips', 'siem', 'edr', 'xdr', 'soar'
+        ]
         
-        return dict(entities)
+        entities = []
+        content_lower = content.lower()
+        
+        for term in security_terms:
+            if term in content_lower:
+                start = content_lower.find(term)
+                entities.append({
+                    'text': term,
+                    'label': 'SECURITY_TERM',
+                    'start': start,
+                    'end': start + len(term),
+                    'confidence': 0.9
+                })
+        
+        return entities
     
     def _extract_keywords(self, doc) -> List[Dict[str, Any]]:
-        """Extract important keywords and noun phrases."""
+        """
+        Extract important keywords from document.
+        
+        Args:
+            doc: spaCy document
+            
+        Returns:
+            List[Dict[str, Any]]: Keywords with scores
+        """
         keywords = []
         
-        # Extract noun phrases
+        # Extract noun chunks and important tokens
         for chunk in doc.noun_chunks:
-            if len(chunk.text) > 3 and chunk.text.lower() not in ['the', 'this', 'that']:
+            if len(chunk.text) > 3:  # Filter short chunks
                 keywords.append({
-                    "text": chunk.text,
-                    "label": "NOUN_PHRASE",
-                    "start": chunk.start_char,
-                    "end": chunk.end_char,
-                    "confidence": 0.6
+                    'text': chunk.text,
+                    'label': 'NOUN_CHUNK',
+                    'start': chunk.start_char,
+                    'end': chunk.end_char,
+                    'confidence': 0.7
                 })
         
-        # Extract significant single tokens
+        # Extract verbs
         for token in doc:
-            if (token.pos_ in ['NOUN', 'PROPN'] and 
-                len(token.text) > 4 and 
-                not token.is_stop and 
-                not token.is_punct):
+            if token.pos_ == 'VERB' and len(token.text) > 3:
                 keywords.append({
-                    "text": token.text,
-                    "label": "KEYWORD",
-                    "start": token.idx,
-                    "end": token.idx + len(token.text),
-                    "confidence": 0.5
+                    'text': token.text,
+                    'label': 'VERB',
+                    'start': token.idx,
+                    'end': token.idx + len(token.text),
+                    'confidence': 0.6
                 })
         
-        return keywords[:20]  # Limit to top 20 keywords
+        return keywords
 
 
 # =============================================================================
@@ -710,66 +848,64 @@ class ThreatAnalyzer:
         Update scraped content with analysis results and create IOC records.
         
         Args:
-            content: Original scraped content
-            analysis: NLP analysis results
+            content: Scraped content
+            analysis: Analysis results
             iocs: Extracted IOCs
         """
         try:
             db = await get_database()
             
-            # Update scraped content
+            # Update content with analysis reference
             await db.scraped_content.update_one(
                 {"_id": content.id},
                 {
                     "$set": {
-                        "processed": True,
-                        "threat_score": analysis.classification.get("threat_scores", {}).get(
-                            analysis.classification["primary_threat"], 0
-                        ),
-                        "updated_at": datetime.utcnow()
+                        "analysis_id": str(analysis.id),
+                        "threat_score": analysis.classification["primary_threat"],
+                        "severity": analysis.classification["severity"],
+                        "analyzed_at": datetime.utcnow()
                     }
                 }
             )
             
             # Create IOC records
-            ioc_ids = []
             for ioc_type, ioc_list in iocs.items():
-                for ioc_info in ioc_list:
-                    ioc_doc = IndicatorOfCompromise(
-                        type=ioc_info["type"],
-                        value=ioc_info["value"],
-                        confidence=ioc_info["confidence"],
-                        severity=analysis.classification["severity"],
-                        source=content.source_url,
-                        source_type="dark_web" if "onion" in content.source_url else "surface_web",
-                        threat_types=[analysis.classification["primary_threat"]]
-                    )
+                for ioc in ioc_list:
+                    ioc_doc = {
+                        "value": ioc["value"],
+                        "type": ioc_type,
+                        "source_content_id": str(content.id),
+                        "source_url": content.url,
+                        "confidence": ioc["confidence"],
+                        "context": ioc["context"],
+                        "first_seen": datetime.utcnow(),
+                        "last_seen": datetime.utcnow(),
+                        "occurrence_count": 1
+                    }
                     
                     # Check if IOC already exists
-                    existing = await db.iocs.find_one({
-                        "value": ioc_doc.value,
-                        "type": ioc_doc.type
-                    })
-                    
-                    if not existing:
-                        result = await db.iocs.insert_one(ioc_doc.dict())
-                        ioc_ids.append(str(result.inserted_id))
+                    existing_ioc = await db.iocs.find_one({"value": ioc["value"], "type": ioc_type})
+                    if existing_ioc:
+                        # Update existing IOC
+                        await db.iocs.update_one(
+                            {"_id": existing_ioc["_id"]},
+                            {
+                                "$inc": {"occurrence_count": 1},
+                                "$set": {"last_seen": datetime.utcnow()}
+                            }
+                        )
                     else:
-                        ioc_ids.append(str(existing["_id"]))
+                        # Create new IOC
+                        await db.iocs.insert_one(ioc_doc)
             
-            # Update content with IOC references
-            if ioc_ids:
-                await db.scraped_content.update_one(
-                    {"_id": content.id},
-                    {"$set": {"extracted_iocs": ioc_ids}}
-                )
+            logger.info(f"💾 Updated content {content.id} with analysis results")
             
         except Exception as e:
             logger.error(f"❌ Failed to update content analysis: {e}")
     
     def _detect_language(self, text: str) -> str:
         """
-        Simple language detection based on character patterns.
+        Simple language detection heuristic.
         
         Args:
             text: Text to analyze
@@ -777,35 +913,42 @@ class ThreatAnalyzer:
         Returns:
             str: Detected language code
         """
-        # Simple heuristic - count common English words
-        english_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
-        words = set(text.lower().split())
-        english_count = len(words.intersection(english_words))
+        # Simple English detection
+        english_chars = sum(1 for c in text if c.isalpha() and ord(c) < 128)
+        total_chars = sum(1 for c in text if c.isalpha())
         
-        if english_count > 5:
+        if total_chars == 0:
+            return "unknown"
+        
+        english_ratio = english_chars / total_chars
+        
+        if english_ratio > 0.8:
             return "en"
+        elif english_ratio > 0.5:
+            return "en-mixed"
         else:
             return "unknown"
     
     async def batch_analyze(self, content_list: List[ScrapedContent]) -> List[NLPAnalysis]:
         """
-        Analyze multiple content items in batch.
+        Analyze multiple content items concurrently.
         
         Args:
-            content_list: List of scraped content to analyze
+            content_list: List of content to analyze
             
         Returns:
             List[NLPAnalysis]: Analysis results
         """
         logger.info(f"🔄 Starting batch analysis of {len(content_list)} items")
         
-        # Process with controlled concurrency
-        semaphore = asyncio.Semaphore(5)  # Limit concurrent analysis
+        # Use semaphore to limit concurrent processing
+        semaphore = asyncio.Semaphore(5)
         
         async def analyze_with_semaphore(content: ScrapedContent) -> NLPAnalysis:
             async with semaphore:
                 return await self.analyze_content(content)
         
+        # Process all content concurrently
         tasks = [analyze_with_semaphore(content) for content in content_list]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -815,11 +958,60 @@ class ThreatAnalyzer:
             if isinstance(result, NLPAnalysis):
                 successful_results.append(result)
             elif isinstance(result, Exception):
-                logger.error(f"❌ Batch analysis task failed: {result}")
+                logger.error(f"❌ Batch analysis item failed: {result}")
         
-        logger.info(f"✅ Batch analysis completed: {len(successful_results)}/{len(content_list)} successful")
-        
+        logger.info(f"✅ Batch analysis completed: {len(successful_results)} successful")
         return successful_results
+
+    # =============================================================================
+    # BACKWARD COMPATIBILITY METHOD
+    # =============================================================================
+    async def analyze_latest_threats(self) -> Dict[str, Any]:
+        """
+        Analyze the latest scraped content for threats.
+        This method provides backward compatibility for older code.
+        
+        Returns:
+            Dict[str, Any]: Analysis results
+        """
+        logger.info("🔍 Analyzing latest threats (backward compatibility)")
+        
+        try:
+            db = await get_database()
+            
+            # Get latest unanalyzed content
+            latest_content = await db.scraped_content.find(
+                {"analysis_id": {"$exists": False}},
+                sort=[("scraped_at", -1)],
+                limit=50
+            ).to_list(length=50)
+            
+            if not latest_content:
+                logger.info("📭 No new content to analyze")
+                return {
+                    "status": "no_content",
+                    "message": "No new content to analyze",
+                    "analyzed_count": 0
+                }
+            
+            # Convert to ScrapedContent objects
+            content_objects = [ScrapedContent(**doc) for doc in latest_content]
+            
+            # Analyze content
+            analyses = await self.batch_analyze(content_objects)
+            
+            logger.info(f"✅ Analyzed {len(analyses)} latest threats")
+            
+            return {
+                "status": "completed",
+                "analyzed_count": len(analyses),
+                "analyses": [analysis.dict() for analysis in analyses],
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Latest threats analysis failed: {e}")
+            raise
 
 
 # =============================================================================
@@ -827,10 +1019,10 @@ class ThreatAnalyzer:
 # =============================================================================
 async def analyze_single_content(content: ScrapedContent) -> NLPAnalysis:
     """
-    Convenience function to analyze a single piece of content.
+    Convenience function to analyze a single content item.
     
     Args:
-        content: Scraped content to analyze
+        content: Content to analyze
         
     Returns:
         NLPAnalysis: Analysis results
@@ -841,13 +1033,13 @@ async def analyze_single_content(content: ScrapedContent) -> NLPAnalysis:
 
 async def extract_iocs_from_text(text: str) -> Dict[str, List[Dict[str, Any]]]:
     """
-    Convenience function to extract IOCs from raw text.
+    Convenience function to extract IOCs from text.
     
     Args:
         text: Text to analyze
         
     Returns:
-        Dict: Extracted IOCs by type
+        Dict[str, List[Dict[str, Any]]]: Extracted IOCs
     """
     extractor = IOCExtractor()
     return extractor.extract_iocs(text)

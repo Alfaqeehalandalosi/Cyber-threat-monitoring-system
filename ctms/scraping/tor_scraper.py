@@ -98,24 +98,23 @@ class TorProxyManager:
         Renew TOR circuit for fresh IP address.
         
         Returns:
-            bool: True if successful, False otherwise
+            bool: Success status
         """
+        if not self.config["enabled"]:
+            return True
+        
         try:
-            if not self.config["enabled"]:
-                logger.info("🌐 Circuit renewal skipped (TOR disabled)")
-                return True
+            # Use TOR control protocol to renew circuit
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((self.config["host"], self.config["control_port"]))
             
-            # Close existing session
-            if self.session and not self.session.closed:
-                await self.session.close()
+            # Send authentication and new circuit command
+            sock.send(b"AUTHENTICATE\r\n")
+            sock.send(b"NEWNYM\r\n")
+            sock.close()
             
-            # Wait for circuit renewal
-            await asyncio.sleep(5)
-            
-            # Create new session
-            self.session = await self.create_session()
             self._circuit_renewal_count += 1
-            
             logger.info(f"🔄 TOR circuit renewed (count: {self._circuit_renewal_count})")
             return True
             
@@ -124,32 +123,32 @@ class TorProxyManager:
             return False
     
     async def close(self) -> None:
-        """Close the session and cleanup."""
+        """Close TOR proxy manager."""
         if self.session and not self.session.closed:
             await self.session.close()
-            logger.info("🔌 TOR proxy session closed")
+            logger.info("🛑 TOR proxy manager closed")
 
 
 # =============================================================================
-# CONTENT EXTRACTOR
+# CONTENT EXTRACTION
 # =============================================================================
 class ContentExtractor:
     """
-    Extracts and processes content from scraped web pages.
-    Handles various content types and formats.
+    Extracts and processes content from web pages.
+    Handles HTML parsing, text extraction, and content cleaning.
     """
     
     def __init__(self):
         """Initialize content extractor."""
-        self.min_content_length = 100
+        pass
     
     def extract_text_content(self, html: str, selectors: Dict[str, str] = None) -> Dict[str, Any]:
         """
-        Extract text content from HTML using BeautifulSoup.
+        Extract text content from HTML using CSS selectors.
         
         Args:
             html: Raw HTML content
-            selectors: CSS selectors for specific content
+            selectors: CSS selectors for content extraction
             
         Returns:
             Dict[str, Any]: Extracted content
@@ -157,95 +156,92 @@ class ContentExtractor:
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
-            # Remove script and style elements
-            for script in soup(["script", "style", "nav", "footer", "header"]):
-                script.decompose()
+            # Default selectors if none provided
+            if not selectors:
+                selectors = {
+                    'title': 'title',
+                    'main_content': 'main, article, .content, .post, .entry',
+                    'headings': 'h1, h2, h3, h4, h5, h6',
+                    'paragraphs': 'p',
+                    'links': 'a[href]',
+                    'meta_description': 'meta[name="description"]',
+                    'meta_keywords': 'meta[name="keywords"]'
+                }
             
-            extracted = {
-                "title": "",
-                "content": "",
-                "links": [],
-                "images": [],
-                "metadata": {}
-            }
+            extracted_content = {}
             
             # Extract title
-            title_tag = soup.find("title")
-            if title_tag:
-                extracted["title"] = title_tag.get_text().strip()
+            title_elem = soup.select_one(selectors.get('title', 'title'))
+            extracted_content['title'] = title_elem.get_text(strip=True) if title_elem else ""
             
-            # Use custom selectors if provided
-            if selectors:
-                content_parts = []
-                for name, selector in selectors.items():
-                    elements = soup.select(selector)
-                    for element in elements:
-                        content_parts.append(element.get_text().strip())
-                
-                extracted["content"] = "\n\n".join(content_parts)
+            # Extract main content
+            main_content = soup.select(selectors.get('main_content', 'main, article, .content'))
+            if main_content:
+                extracted_content['main_content'] = ' '.join([elem.get_text(strip=True) for elem in main_content])
             else:
-                # Default content extraction
-                # Try main content areas first
-                main_selectors = [
-                    "main", "article", ".content", "#content",
-                    ".post", ".article", ".entry"
-                ]
-                
-                content_found = False
-                for selector in main_selectors:
-                    main_content = soup.select_one(selector)
-                    if main_content:
-                        extracted["content"] = main_content.get_text().strip()
-                        content_found = True
-                        break
-                
                 # Fallback to body content
-                if not content_found:
-                    body = soup.find("body")
-                    if body:
-                        extracted["content"] = body.get_text().strip()
+                body = soup.find('body')
+                extracted_content['main_content'] = body.get_text(strip=True) if body else ""
             
-            # Clean up content
-            extracted["content"] = self._clean_text(extracted["content"])
+            # Extract headings
+            headings = soup.select(selectors.get('headings', 'h1, h2, h3, h4, h5, h6'))
+            extracted_content['headings'] = [h.get_text(strip=True) for h in headings]
+            
+            # Extract paragraphs
+            paragraphs = soup.select(selectors.get('paragraphs', 'p'))
+            extracted_content['paragraphs'] = [p.get_text(strip=True) for p in paragraphs]
             
             # Extract links
-            for link in soup.find_all("a", href=True):
-                href = link["href"]
-                text = link.get_text().strip()
-                if href and text:
-                    extracted["links"].append({"url": href, "text": text})
+            links = soup.select(selectors.get('links', 'a[href]'))
+            extracted_content['links'] = [
+                {
+                    'text': link.get_text(strip=True),
+                    'href': link.get('href', ''),
+                    'title': link.get('title', '')
+                }
+                for link in links
+            ]
             
-            # Extract images
-            for img in soup.find_all("img", src=True):
-                src = img["src"]
-                alt = img.get("alt", "")
-                extracted["images"].append({"src": src, "alt": alt})
+            # Extract meta tags
+            meta_desc = soup.select_one(selectors.get('meta_description', 'meta[name="description"]'))
+            extracted_content['meta_description'] = meta_desc.get('content', '') if meta_desc else ""
             
-            # Extract metadata
-            for meta in soup.find_all("meta"):
-                name = meta.get("name") or meta.get("property")
-                content = meta.get("content")
-                if name and content:
-                    extracted["metadata"][name] = content
+            meta_keywords = soup.select_one(selectors.get('meta_keywords', 'meta[name="keywords"]'))
+            extracted_content['meta_keywords'] = meta_keywords.get('content', '') if meta_keywords else ""
             
-            return extracted
+            # Clean and combine all text content
+            all_text = ' '.join([
+                extracted_content['title'],
+                extracted_content['main_content'],
+                ' '.join(extracted_content['headings']),
+                ' '.join(extracted_content['paragraphs']),
+                extracted_content['meta_description'],
+                extracted_content['meta_keywords']
+            ])
+            
+            extracted_content['full_text'] = self._clean_text(all_text)
+            
+            return extracted_content
             
         except Exception as e:
             logger.error(f"❌ Content extraction failed: {e}")
             return {
-                "title": "",
-                "content": "",
-                "links": [],
-                "images": [],
-                "metadata": {}
+                'title': '',
+                'main_content': '',
+                'headings': [],
+                'paragraphs': [],
+                'links': [],
+                'meta_description': '',
+                'meta_keywords': '',
+                'full_text': ''
             }
     
     def _clean_text(self, text: str) -> str:
         """
-        Clean and normalize extracted text.
+        Clean and normalize text content.
         
         Args:
-            text: Raw text
+            text: Raw text content
             
         Returns:
             str: Cleaned text
@@ -254,21 +250,20 @@ class ContentExtractor:
             return ""
         
         # Remove extra whitespace
-        lines = [line.strip() for line in text.split('\n')]
-        lines = [line for line in lines if line]
+        text = ' '.join(text.split())
         
-        # Join with single newlines
-        cleaned = '\n'.join(lines)
+        # Remove special characters but keep basic punctuation
+        import re
+        text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}]', '', text)
         
-        # Remove excessive newlines
-        while '\n\n\n' in cleaned:
-            cleaned = cleaned.replace('\n\n\n', '\n\n')
+        # Normalize spacing around punctuation
+        text = re.sub(r'\s+([\.\,\!\?\;\:])', r'\1', text)
         
-        return cleaned.strip()
+        return text.strip()
     
     def generate_content_hash(self, content: str) -> str:
         """
-        Generate a hash for content deduplication.
+        Generate SHA-256 hash of content for deduplication.
         
         Args:
             content: Content to hash
@@ -280,46 +275,27 @@ class ContentExtractor:
 
 
 # =============================================================================
-# MAIN SCRAPER CLASS
+# THREAT INTELLIGENCE SCRAPER
 # =============================================================================
 class ThreatIntelligenceScraper:
     """
-    Main scraper class for collecting threat intelligence from various sources.
-    Supports TOR proxy, rate limiting, and intelligent content extraction.
+    Advanced web scraper for threat intelligence collection.
+    Supports TOR proxy, rate limiting, and content processing.
     """
     
     def __init__(self):
-        """Initialize the threat intelligence scraper."""
+        """Initialize threat intelligence scraper."""
         self.tor_manager = TorProxyManager()
         self.content_extractor = ContentExtractor()
         self.session: Optional[aiohttp.ClientSession] = None
+        self.database_url = settings.database_url
+        self._request_count = 0
+        self._last_request_time = 0
         
-        # Rate limiting and delays
-        self.delay_range = (
-            settings.scraping_delay - settings.scraping_randomize_delay,
-            settings.scraping_delay + settings.scraping_randomize_delay
-        )
-        
-        # Tracking
-        self.scraped_urls: Set[str] = set()
-        self.failed_urls: Set[str] = set()
-        self.session_stats = {
-            "total_requests": 0,
-            "successful_requests": 0,
-            "failed_requests": 0,
-            "start_time": None
-        }
-    
     async def initialize(self) -> None:
-        """Initialize the scraper and TOR session."""
-        try:
-            self.session = await self.tor_manager.get_session()
-            self.session_stats["start_time"] = datetime.utcnow()
-            logger.info("🕷️ Threat intelligence scraper initialized")
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize scraper: {e}")
-            raise
+        """Initialize the scraper."""
+        self.session = await self.tor_manager.create_session()
+        logger.info("🔧 Threat intelligence scraper initialized")
     
     async def scrape_url(
         self,
@@ -328,19 +304,18 @@ class ThreatIntelligenceScraper:
         custom_headers: Optional[Dict[str, str]] = None
     ) -> Optional[ScrapedContent]:
         """
-        Scrape content from a single URL.
+        Scrape a single URL for threat intelligence content.
         
         Args:
-            url: Target URL to scrape
+            url: URL to scrape
             source_config: Source configuration
-            custom_headers: Additional HTTP headers
+            custom_headers: Custom HTTP headers
             
         Returns:
-            Optional[ScrapedContent]: Scraped content or None if failed
+            Optional[ScrapedContent]: Scraped content
         """
-        if url in self.scraped_urls:
-            logger.info(f"🔄 URL already scraped: {url}")
-            return None
+        if not self.session:
+            await self.initialize()
         
         try:
             # Apply rate limiting
@@ -350,96 +325,50 @@ class ThreatIntelligenceScraper:
             headers = {"User-Agent": settings.user_agent}
             if custom_headers:
                 headers.update(custom_headers)
-            if source_config and source_config.custom_headers:
-                headers.update(source_config.custom_headers)
-            
-            # Track request
-            self.session_stats["total_requests"] += 1
-            
-            logger.scraping_activity(url, "STARTING", {"headers_count": len(headers)})
             
             # Make request
-            proxy = getattr(self.session, '_proxy_url', None) if self.tor_manager.config["enabled"] else None
-            
-            async with self.session.get(
-                url,
-                headers=headers,
-                proxy=proxy,
-                allow_redirects=True,
-                max_redirects=5
-            ) as response:
-                
-                # Check response status
-                if response.status != 200:
-                    logger.warning(f"⚠️ Non-200 response: {response.status} for {url}")
-                    self.session_stats["failed_requests"] += 1
-                    self.failed_urls.add(url)
+            async with self.session.get(url, headers=headers, ssl=False) as response:
+                if response.status == 200:
+                    html_content = await response.text()
+                    
+                    # Extract content
+                    extracted_content = self.content_extractor.extract_text_content(html_content)
+                    
+                    # Create scraped content object
+                    scraped_content = ScrapedContent(
+                        url=url,
+                        title=extracted_content.get('title', ''),
+                        content=extracted_content.get('full_text', ''),
+                        content_hash=self.content_extractor.generate_content_hash(extracted_content.get('full_text', '')),
+                        source_name=source_config.name if source_config else 'manual',
+                        source_type=source_config.source_type if source_config else SourceType.SURFACE_WEB,
+                        scraped_at=datetime.utcnow(),
+                        metadata={
+                            'headings': extracted_content.get('headings', []),
+                            'links': extracted_content.get('links', []),
+                            'meta_description': extracted_content.get('meta_description', ''),
+                            'meta_keywords': extracted_content.get('meta_keywords', ''),
+                            'response_headers': dict(response.headers),
+                            'status_code': response.status
+                        }
+                    )
+                    
+                    self._request_count += 1
+                    logger.info(f"✅ Scraped {url} ({len(extracted_content.get('full_text', ''))} chars)")
+                    
+                    return scraped_content
+                    
+                else:
+                    logger.warning(f"⚠️ Failed to scrape {url}: HTTP {response.status}")
                     return None
-                
-                # Read content
-                content = await response.text()
-                content_length = len(content)
-                
-                # Validate content length
-                min_length = source_config.min_content_length if source_config else self.content_extractor.min_content_length
-                if content_length < min_length:
-                    logger.warning(f"⚠️ Content too short ({content_length} bytes): {url}")
-                    self.session_stats["failed_requests"] += 1
-                    return None
-                
-                # Extract content
-                extracted = self.content_extractor.extract_text_content(
-                    content,
-                    source_config.content_selectors if source_config else None
-                )
-                
-                # Generate content hash
-                content_hash = self.content_extractor.generate_content_hash(extracted["content"])
-                
-                # Create scraped content document
-                scraped_content = ScrapedContent(
-                    source_id=str(source_config.id) if source_config else "manual",
-                    source_url=source_config.url if source_config else url,
-                    scraped_url=url,
-                    title=extracted["title"],
-                    content=extracted["content"],
-                    content_hash=content_hash,
-                    response_status=response.status,
-                    content_length=content_length,
-                    scraping_timestamp=datetime.utcnow()
-                )
-                
-                # Track success
-                self.scraped_urls.add(url)
-                self.session_stats["successful_requests"] += 1
-                
-                logger.scraping_activity(
-                    url, 
-                    "SUCCESS", 
-                    {
-                        "content_length": content_length,
-                        "title_length": len(extracted["title"]),
-                        "links_found": len(extracted["links"])
-                    }
-                )
-                
-                return scraped_content
-                
-        except asyncio.TimeoutError:
-            logger.error(f"⏰ Timeout scraping {url}")
-            self.session_stats["failed_requests"] += 1
-            self.failed_urls.add(url)
-            
+                    
         except Exception as e:
             logger.error(f"❌ Error scraping {url}: {e}")
-            self.session_stats["failed_requests"] += 1
-            self.failed_urls.add(url)
-        
-        return None
+            return None
     
     async def scrape_source(self, source: ScrapingSource) -> List[ScrapedContent]:
         """
-        Scrape content from a configured source.
+        Scrape all URLs from a source.
         
         Args:
             source: Source configuration
@@ -447,32 +376,26 @@ class ThreatIntelligenceScraper:
         Returns:
             List[ScrapedContent]: List of scraped content
         """
-        logger.info(f"🎯 Starting scrape for source: {source.name}")
-        
-        if not source.enabled:
-            logger.info(f"⏸️ Source disabled: {source.name}")
-            return []
-        
-        scraped_content = []
+        logger.info(f"🔍 Scraping source: {source.name}")
         
         try:
-            # Discover URLs to scrape
-            urls_to_scrape = await self._discover_urls(source)
+            # Discover URLs from source
+            urls = await self._discover_urls(source)
+            logger.info(f"📋 Found {len(urls)} URLs for {source.name}")
             
-            logger.info(f"🔍 Found {len(urls_to_scrape)} URLs to scrape for {source.name}")
-            
-            # Apply concurrent request limit
-            semaphore = asyncio.Semaphore(settings.concurrent_requests)
+            # Scrape URLs with concurrency control
+            semaphore = asyncio.Semaphore(source.max_concurrent_requests)
+            scraped_content = []
             
             async def scrape_with_semaphore(url: str) -> Optional[ScrapedContent]:
                 async with semaphore:
                     return await self.scrape_url(url, source)
             
-            # Scrape all URLs
-            tasks = [scrape_with_semaphore(url) for url in urls_to_scrape]
+            # Scrape all URLs concurrently
+            tasks = [scrape_with_semaphore(url) for url in urls]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
-            # Collect successful results
+            # Filter successful results
             for result in results:
                 if isinstance(result, ScrapedContent):
                     scraped_content.append(result)
@@ -480,81 +403,85 @@ class ThreatIntelligenceScraper:
                     logger.error(f"❌ Scraping task failed: {result}")
             
             # Update source statistics
-            await self._update_source_stats(source, len(scraped_content), len(urls_to_scrape))
+            await self._update_source_stats(source, len(scraped_content), len(urls))
             
-            logger.info(f"✅ Completed scraping {source.name}: {len(scraped_content)} items collected")
+            logger.info(f"✅ Scraped {len(scraped_content)} items from {source.name}")
+            return scraped_content
             
         except Exception as e:
             logger.error(f"❌ Failed to scrape source {source.name}: {e}")
-        
-        return scraped_content
+            return []
     
     async def _discover_urls(self, source: ScrapingSource) -> List[str]:
         """
-        Discover URLs to scrape from a source.
+        Discover URLs from a source.
         
         Args:
             source: Source configuration
             
         Returns:
-            List[str]: URLs to scrape
+            List[str]: List of discovered URLs
         """
         urls = []
         
-        try:
-            # Start with the base URL
-            urls.append(source.url)
-            
-            # If URL patterns are specified, try to discover more URLs
-            if source.url_patterns:
-                discovered_urls = await self._crawl_for_urls(source)
-                urls.extend(discovered_urls)
-            
-            # Remove duplicates and invalid URLs
-            urls = list(set(urls))
-            urls = [url for url in urls if self._is_valid_url(url)]
-            
-        except Exception as e:
-            logger.error(f"❌ URL discovery failed for {source.name}: {e}")
+        # Add base URLs
+        if source.base_urls:
+            urls.extend(source.base_urls)
         
-        return urls
+        # Add specific URLs
+        if source.urls:
+            urls.extend(source.urls)
+        
+        # Crawl for additional URLs if enabled
+        if source.enable_crawling and source.base_urls:
+            crawled_urls = await self._crawl_for_urls(source)
+            urls.extend(crawled_urls)
+        
+        # Remove duplicates and validate
+        unique_urls = list(set(urls))
+        valid_urls = [url for url in unique_urls if self._is_valid_url(url)]
+        
+        return valid_urls[:source.max_urls_per_cycle]
     
     async def _crawl_for_urls(self, source: ScrapingSource) -> List[str]:
         """
-        Crawl source page to discover additional URLs.
+        Crawl source for additional URLs.
         
         Args:
             source: Source configuration
             
         Returns:
-            List[str]: Discovered URLs
+            List[str]: List of discovered URLs
         """
         discovered_urls = []
         
-        try:
-            # Scrape the base page
-            scraped = await self.scrape_url(source.url)
-            if not scraped:
-                return discovered_urls
-            
-            # Parse HTML to find links
-            soup = BeautifulSoup(scraped.content, 'html.parser')
-            
-            for link in soup.find_all('a', href=True):
-                href = link['href']
-                
-                # Convert relative URLs to absolute
-                full_url = urljoin(source.url, href)
-                
-                # Check against URL patterns
-                for pattern in source.url_patterns:
-                    import re
-                    if re.search(pattern, full_url):
-                        discovered_urls.append(full_url)
-                        break
-            
-        except Exception as e:
-            logger.error(f"❌ URL crawling failed: {e}")
+        for base_url in source.base_urls[:3]:  # Limit crawling to first 3 base URLs
+            try:
+                async with self.session.get(base_url, ssl=False) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        soup = BeautifulSoup(html, 'html.parser')
+                        
+                        # Find links
+                        links = soup.find_all('a', href=True)
+                        for link in links:
+                            href = link['href']
+                            
+                            # Convert relative URLs to absolute
+                            if href.startswith('/'):
+                                href = urljoin(base_url, href)
+                            elif not href.startswith('http'):
+                                continue
+                            
+                            # Filter by domain if specified
+                            if source.domain_filter:
+                                if source.domain_filter in href:
+                                    discovered_urls.append(href)
+                            else:
+                                discovered_urls.append(href)
+                                
+            except Exception as e:
+                logger.error(f"❌ Crawling failed for {base_url}: {e}")
         
         return discovered_urls
     
@@ -570,86 +497,104 @@ class ThreatIntelligenceScraper:
         """
         try:
             parsed = urlparse(url)
-            return bool(parsed.scheme and parsed.netloc)
-        except:
+            return all([parsed.scheme, parsed.netloc])
+        except Exception:
             return False
     
     async def _apply_rate_limit(self) -> None:
         """Apply rate limiting between requests."""
-        delay = random.uniform(*self.delay_range)
-        await asyncio.sleep(delay)
+        if self._last_request_time > 0:
+            elapsed = time.time() - self._last_request_time
+            min_interval = 1.0  # Minimum 1 second between requests
+            if elapsed < min_interval:
+                await asyncio.sleep(min_interval - elapsed)
+        
+        self._last_request_time = time.time()
     
     async def _update_source_stats(self, source: ScrapingSource, success_count: int, total_count: int) -> None:
         """
-        Update source scraping statistics.
+        Update source statistics in database.
         
         Args:
             source: Source configuration
             success_count: Number of successful scrapes
-            total_count: Total URLs attempted
+            total_count: Total number of attempts
         """
         try:
-            # Calculate success rate
-            success_rate = (success_count / total_count) if total_count > 0 else 0.0
-            
-            # Update source in database
             db = await get_database()
             await db.scraping_sources.update_one(
                 {"_id": source.id},
                 {
                     "$set": {
                         "last_scraped": datetime.utcnow(),
-                        "success_rate": success_rate,
-                        "updated_at": datetime.utcnow()
+                        "last_success_count": success_count,
+                        "last_total_count": total_count
+                    },
+                    "$inc": {
+                        "total_scrapes": 1,
+                        "total_successful_scrapes": success_count
                     }
                 }
             )
-            
-            logger.info(f"📊 Updated stats for {source.name}: {success_rate:.2%} success rate")
-            
         except Exception as e:
             logger.error(f"❌ Failed to update source stats: {e}")
     
     async def renew_tor_circuit(self) -> bool:
         """
-        Renew TOR circuit and session.
+        Renew TOR circuit for fresh IP address.
         
         Returns:
-            bool: True if successful
+            bool: Success status
         """
-        success = await self.tor_manager.renew_circuit()
-        if success:
-            self.session = await self.tor_manager.get_session()
-        return success
+        return await self.tor_manager.renew_circuit()
     
     def get_session_stats(self) -> Dict[str, Any]:
         """
-        Get current session statistics.
+        Get session statistics.
         
         Returns:
             Dict[str, Any]: Session statistics
         """
-        stats = self.session_stats.copy()
-        
-        if stats["start_time"]:
-            duration = (datetime.utcnow() - stats["start_time"]).total_seconds()
-            stats["duration_seconds"] = duration
-            stats["requests_per_minute"] = (stats["total_requests"] / duration) * 60 if duration > 0 else 0
-        
-        stats["success_rate"] = (
-            stats["successful_requests"] / stats["total_requests"] 
-            if stats["total_requests"] > 0 else 0
-        )
-        
-        stats["unique_urls_scraped"] = len(self.scraped_urls)
-        stats["failed_urls"] = len(self.failed_urls)
-        
-        return stats
+        return {
+            "total_requests": self._request_count,
+            "tor_enabled": self.tor_manager.config["enabled"],
+            "circuit_renewals": self.tor_manager._circuit_renewal_count,
+            "session_active": self.session is not None and not self.session.closed
+        }
     
     async def close(self) -> None:
         """Close scraper and cleanup resources."""
         await self.tor_manager.close()
         logger.info("🛑 Threat intelligence scraper closed")
+
+    # =============================================================================
+    # BACKWARD COMPATIBILITY METHOD
+    # =============================================================================
+    async def run_full_cycle(self) -> Dict[str, Any]:
+        """
+        Run a full scraping cycle for all enabled sources.
+        This method provides backward compatibility for older code.
+        
+        Returns:
+            Dict[str, Any]: Cycle results and statistics
+        """
+        logger.info("🔄 Starting full scraping cycle (backward compatibility)")
+        
+        try:
+            # Create orchestrator and run cycle
+            orchestrator = ScrapingOrchestrator()
+            await orchestrator.initialize()
+            
+            try:
+                results = await orchestrator.run_scraping_cycle()
+                logger.info("✅ Full scraping cycle completed")
+                return results
+            finally:
+                await orchestrator.close()
+                
+        except Exception as e:
+            logger.error(f"❌ Full scraping cycle failed: {e}")
+            raise
 
 
 # =============================================================================
