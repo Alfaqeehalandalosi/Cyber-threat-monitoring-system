@@ -79,7 +79,6 @@ class LoggerManager:
             "{time:YYYY-MM-DD HH:mm:ss.SSS} | "
             "{level: <8} | "
             "{name}:{function}:{line} | "
-            "{extra[request_id]:{request_id}} | "
             "{message}"
         )
         
