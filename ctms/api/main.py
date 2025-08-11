@@ -25,6 +25,7 @@ from ctms.database.models import (
 
 # Import new NLP endpoints
 from ctms.api.nlp_endpoints import router as nlp_router
+from ctms.api.real_data_endpoints import router as real_data_router
 
 logger = get_logger(__name__)
 
@@ -84,6 +85,9 @@ app.add_middleware(
 
 # Include NLP endpoints
 app.include_router(nlp_router, prefix="/api/v1", tags=["NLP Analysis"])
+
+# Include real data endpoints
+app.include_router(real_data_router)
 
 
 # =============================================================================
