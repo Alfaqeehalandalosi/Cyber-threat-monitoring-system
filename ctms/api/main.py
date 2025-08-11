@@ -107,7 +107,9 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Return mock user (in production, decode JWT and get real user)
+    # TODO: Implement proper JWT token validation
+    # For now, return a basic user structure
+    # In production, decode JWT and get real user from database
     return {
         "user_id": "admin",
         "username": "admin",
