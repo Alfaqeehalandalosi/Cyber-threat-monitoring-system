@@ -1,6 +1,7 @@
 """
 Hacker-Grade Threat Intelligence API Endpoints
 Advanced threat monitoring and alerting system for academic cybersecurity research
+Educational purposes only - Defensive security research
 """
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
@@ -15,11 +16,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
 from pydantic import BaseModel
-import re # Added missing import for regex
+import re
 
 # Import our modules
 from ctms.scraping.hacker_grade_scraper import get_hacker_grade_threat_intelligence
-from ctms.analysis.advanced_threat_analyzer import analyze_articles, AdvancedThreatAnalyzer
+from ctms.analysis.hacker_grade_analyzer import analyze_hacker_grade_articles
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -195,7 +196,7 @@ async def get_hacker_grade_threat_intelligence_endpoint(
         threat_data = await get_hacker_grade_threat_intelligence()
         
         # Analyze threats
-        analysis_result = analyze_articles(threat_data['threat_articles'])
+        analysis_result = analyze_hacker_grade_articles(threat_data['threat_articles'])
         
         # Combine data
         result = {
