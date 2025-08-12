@@ -64,26 +64,34 @@ class HackerGradeSystemRunner:
     def check_dependencies(self):
         """Check if all required dependencies are installed"""
         logger.info("🔍 Checking system dependencies...")
-        
+
         required_packages = [
-            'fastapi', 'uvicorn', 'streamlit', 'aiohttp', 'requests',
-            'pandas', 'numpy', 'scikit-learn', 'beautifulsoup4', 'lxml'
+            ('fastapi', 'fastapi'),
+            ('uvicorn', 'uvicorn'),
+            ('streamlit', 'streamlit'),
+            ('aiohttp', 'aiohttp'),
+            ('requests', 'requests'),
+            ('pandas', 'pandas'),
+            ('numpy', 'numpy'),
+            ('sklearn', 'scikit-learn'),  # Fixed import name
+            ('bs4', 'beautifulsoup4'),    # Fixed import name
+            ('lxml', 'lxml')
         ]
-        
+
         missing_packages = []
-        for package in required_packages:
+        for import_name, package_name in required_packages:
             try:
-                __import__(package)
-                logger.info(f"   ✅ {package}")
+                __import__(import_name)
+                logger.info(f"   ✅ {package_name}")
             except ImportError:
-                missing_packages.append(package)
-                logger.error(f"   ❌ {package} - Missing")
-        
+                missing_packages.append(package_name)
+                logger.error(f"   ❌ {package_name} - Missing")
+
         if missing_packages:
             logger.error(f"❌ Missing packages: {', '.join(missing_packages)}")
             logger.error("Please install missing packages using: pip install -r requirements.txt")
             return False
-        
+
         logger.info("✅ All dependencies are installed")
         return True
     
