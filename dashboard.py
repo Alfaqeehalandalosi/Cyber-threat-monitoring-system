@@ -200,7 +200,7 @@ st.markdown("""
 API_BASE_URL = "http://localhost:8000"
 API_TOKEN = os.getenv("CTMS_API_TOKEN", "demo_token_for_development_12345")
 
-def make_api_request(endpoint: str, timeout: int = 30) -> Dict[str, Any]:
+def make_api_request(endpoint: str, timeout: int = 30, force_refresh: bool = False) -> Dict[str, Any]:
     """Make API request with error handling and loading state"""
     try:
         headers = {
@@ -209,7 +209,41 @@ def make_api_request(endpoint: str, timeout: int = 30) -> Dict[str, Any]:
         }
         
         url = f"{API_BASE_URL}{endpoint}"
+        
+        # Add force_refresh parameter if requested
+        if force_refresh and "?" not in url:
+            url += "?force_refresh=true"
+        elif force_refresh:
+            url += "&force_refresh=true"
+        
         response = requests.get(url, headers=headers, timeout=timeout)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"API Error: {response.status_code} - {response.text}")
+            return None
+            
+    except requests.exceptions.Timeout:
+        st.error("API request timed out")
+        return None
+    except requests.exceptions.ConnectionError:
+        st.error("Cannot connect to API server. Is it running?")
+        return None
+    except Exception as e:
+        st.error(f"API Request Error: {str(e)}")
+        return None
+
+def make_post_request(endpoint: str, timeout: int = 30) -> Dict[str, Any]:
+    """Make POST API request with error handling"""
+    try:
+        headers = {
+            "Authorization": f"Bearer {API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"{API_BASE_URL}{endpoint}"
+        response = requests.post(url, headers=headers, timeout=timeout)
         
         if response.status_code == 200:
             return response.json()
@@ -275,10 +309,14 @@ def generate_mock_historical_data() -> Dict[str, List]:
         "counts": counts
     }
 
-def render_header(api_status: bool, collection_time: str = None):
+def render_header(api_status: bool, collection_time: str = None, force_refresh: bool = False):
     """Render dashboard header with status indicator"""
     status_class = "status-green" if api_status else "status-red"
     status_text = "Connected" if api_status else "Disconnected"
+    
+    # Add cache status indicator
+    cache_status = "🔄 Fresh Data" if force_refresh else "💾 Cached Data"
+    cache_color = "#00ff88" if force_refresh else "#00ccff"
     
     st.markdown(f"""
     <div class="dashboard-header">
@@ -290,8 +328,13 @@ def render_header(api_status: bool, collection_time: str = None):
                 <span class="status-indicator {status_class}"></span>
                 <span style="color: #000; font-weight: 600;">API Status: {status_text}</span>
             </div>
-            <div style="color: #000; font-weight: 500;">
-                Last Updated: {format_time_ago(collection_time) if collection_time else 'Unknown'}
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="color: {cache_color}; font-weight: 600; font-size: 0.9rem;">
+                    {cache_status}
+                </div>
+                <div style="color: #000; font-weight: 500;">
+                    Last Updated: {format_time_ago(collection_time) if collection_time else 'Unknown'}
+                </div>
             </div>
         </div>
     </div>
@@ -551,12 +594,25 @@ def main():
         st.session_state.last_refresh = current_time
         st.rerun()
     
-    # Manual refresh button
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Manual refresh buttons
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col2:
         if st.button("🔄 Refresh Data", type="primary"):
             st.session_state.last_refresh = current_time
+            st.session_state.force_refresh = True
             st.rerun()
+    
+    with col3:
+        if st.button("🗑️ Clear Cache", help="Clear cached data to force fresh scraping"):
+            # Clear cache via API
+            result = make_post_request("/api/v1/real/clear-cache")
+            if result:
+                st.success("Cache cleared successfully!")
+                st.session_state.last_refresh = current_time
+                st.session_state.force_refresh = True
+                st.rerun()
+            else:
+                st.error("Failed to clear cache")
     
     # Show refresh info
     time_until_refresh = 60 - time_since_refresh
@@ -566,17 +622,22 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
+    # Check if force refresh is needed
+    force_refresh = st.session_state.get('force_refresh', False)
+    if force_refresh:
+        st.session_state.force_refresh = False  # Reset flag
+    
     # Fetch data with loading spinner
     with st.spinner("🔄 Fetching threat intelligence data..."):
-        summary_data = make_api_request("/api/v1/real/threats/summary")
-        real_data = make_api_request("/api/v1/real/threats/intelligence")
+        summary_data = make_api_request("/api/v1/real/threats/summary", force_refresh=force_refresh)
+        real_data = make_api_request("/api/v1/real/threats/intelligence", force_refresh=force_refresh)
     
     # Determine API status
     api_status = summary_data is not None and real_data is not None
     collection_time = summary_data.get('collection_time') if summary_data else None
     
     # Render header
-    render_header(api_status, collection_time)
+    render_header(api_status, collection_time, force_refresh)
     
     if not api_status:
         st.error("❌ Unable to connect to threat intelligence API. Please check if the server is running.")

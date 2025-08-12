@@ -21,15 +21,52 @@ router = APIRouter(prefix="/api/v1/real", tags=["Real Threat Intelligence"])
 
 # Cache for real data
 REAL_DATA_CACHE = {}
-CACHE_DURATION = 3600  # 1 hour
+CACHE_DURATION = 300  # 5 minutes (reduced from 1 hour for more responsive updates)
+
+@router.post("/refresh")
+async def refresh_real_data(background_tasks: BackgroundTasks):
+    """Manually refresh real threat intelligence data"""
+    try:
+        # Clear cache to force refresh
+        REAL_DATA_CACHE.clear()
+        
+        # Fetch fresh data in background
+        background_tasks.add_task(fetch_fresh_data)
+        
+        return {
+            'message': 'Real threat intelligence refresh initiated',
+            'status': 'success',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error initiating data refresh: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to initiate data refresh: {str(e)}")
+
+@router.post("/clear-cache")
+async def clear_real_data_cache():
+    """Clear the real data cache to force fresh data on next request"""
+    try:
+        REAL_DATA_CACHE.clear()
+        logger.info("Real data cache cleared")
+        
+        return {
+            'message': 'Real data cache cleared successfully',
+            'status': 'success',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error clearing cache: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
 @router.get("/threats/intelligence")
-async def get_real_threat_intelligence_endpoint():
+async def get_real_threat_intelligence_endpoint(force_refresh: bool = False):
     """Get real threat intelligence from web scraping"""
     try:
-        # Check cache first
+        # Check cache first (unless force refresh is requested)
         current_time = datetime.now().timestamp()
-        if REAL_DATA_CACHE.get('data') and (current_time - REAL_DATA_CACHE.get('timestamp', 0)) < CACHE_DURATION:
+        if not force_refresh and REAL_DATA_CACHE.get('data') and (current_time - REAL_DATA_CACHE.get('timestamp', 0)) < CACHE_DURATION:
             logger.info("Returning cached real threat intelligence data")
             return REAL_DATA_CACHE['data']
         
@@ -48,9 +85,13 @@ async def get_real_threat_intelligence_endpoint():
         raise HTTPException(status_code=500, detail=f"Failed to fetch real threat intelligence: {str(e)}")
 
 @router.get("/threats/summary")
-async def get_real_threat_summary():
+async def get_real_threat_summary(force_refresh: bool = False):
     """Get summary of real threat intelligence"""
     try:
+        # If force refresh is requested, clear cache first
+        if force_refresh:
+            REAL_DATA_CACHE.clear()
+        
         data = await get_real_threat_intelligence()
         
         summary = {
@@ -111,26 +152,6 @@ async def get_sources_status():
     except Exception as e:
         logger.error(f"Error getting sources status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get sources status: {str(e)}")
-
-@router.post("/refresh")
-async def refresh_real_data(background_tasks: BackgroundTasks):
-    """Manually refresh real threat intelligence data"""
-    try:
-        # Clear cache to force refresh
-        REAL_DATA_CACHE.clear()
-        
-        # Fetch fresh data in background
-        background_tasks.add_task(fetch_fresh_data)
-        
-        return {
-            'message': 'Real threat intelligence refresh initiated',
-            'status': 'success',
-            'timestamp': datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Error initiating data refresh: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to initiate data refresh: {str(e)}")
 
 @router.get("/health")
 async def get_real_data_health():
