@@ -1,0 +1,270 @@
+{
+  "advanced_threat_sources": {
+    "github_security": [
+      {
+        "id": "github_cve_repos",
+        "name": "GitHub CVE Repositories",
+        "type": "github",
+        "enabled": true,
+        "description": "Monitor GitHub for CVE-related repositories",
+        "search_terms": ["CVE", "exploit", "PoC", "vulnerability", "zero-day"],
+        "api_endpoint": "https://api.github.com/search/repositories",
+        "scraping_interval": 1800,
+        "tags": ["github", "cve", "exploits", "vulnerabilities"]
+      },
+      {
+        "id": "github_security_advisories",
+        "name": "GitHub Security Advisories",
+        "type": "github",
+        "enabled": true,
+        "description": "Monitor GitHub security advisories",
+        "api_endpoint": "https://api.github.com/advisories",
+        "scraping_interval": 3600,
+        "tags": ["github", "advisories", "security"]
+      }
+    ],
+    "cve_databases": [
+      {
+        "id": "nvd_cve",
+        "name": "NVD CVE Database",
+        "type": "cve",
+        "enabled": true,
+        "description": "National Vulnerability Database",
+        "api_endpoint": "https://nvd.nist.gov/feeds/xml/cve/misc/nvd-rss.xml",
+        "scraping_interval": 1800,
+        "tags": ["nvd", "cve", "vulnerabilities", "government"]
+      },
+      {
+        "id": "cve_details",
+        "name": "CVE Details",
+        "type": "cve",
+        "enabled": true,
+        "description": "Comprehensive CVE database",
+        "api_endpoint": "https://www.cvedetails.com/vulnerability-feed.php",
+        "scraping_interval": 1800,
+        "tags": ["cve", "vulnerabilities", "exploits"]
+      },
+      {
+        "id": "exploit_db",
+        "name": "Exploit Database",
+        "type": "exploit",
+        "enabled": true,
+        "description": "Exploit database and security research",
+        "api_endpoint": "https://www.exploit-db.com/rss.xml",
+        "scraping_interval": 1800,
+        "tags": ["exploits", "vulnerabilities", "security"]
+      }
+    ],
+    "security_research": [
+      {
+        "id": "google_project_zero",
+        "name": "Google Project Zero",
+        "type": "research",
+        "enabled": true,
+        "description": "Google Project Zero security research",
+        "api_endpoint": "https://googleprojectzero.blogspot.com/feeds/posts/default",
+        "scraping_interval": 7200,
+        "tags": ["google", "project_zero", "research", "vulnerabilities"]
+      },
+      {
+        "id": "microsoft_security",
+        "name": "Microsoft Security Blog",
+        "type": "research",
+        "enabled": true,
+        "description": "Microsoft security research and insights",
+        "api_endpoint": "https://www.microsoft.com/security/blog/feed/",
+        "scraping_interval": 7200,
+        "tags": ["microsoft", "security", "research", "threats"]
+      },
+      {
+        "id": "github_security_lab",
+        "name": "GitHub Security Lab",
+        "type": "research",
+        "enabled": true,
+        "description": "GitHub Security Lab research and findings",
+        "api_endpoint": "https://securitylab.github.com/rss.xml",
+        "scraping_interval": 7200,
+        "tags": ["github", "security_lab", "research", "vulnerabilities"]
+      }
+    ],
+    "paste_sites": [
+      {
+        "id": "pastebin_public",
+        "name": "Pastebin Public",
+        "type": "paste",
+        "enabled": true,
+        "description": "Monitor public pastebin for security content",
+        "api_endpoint": "https://pastebin.com/archive",
+        "scraping_interval": 3600,
+        "tags": ["pastebin", "dumps", "leaks", "public"]
+      },
+      {
+        "id": "ghostbin_public",
+        "name": "Ghostbin Public",
+        "type": "paste",
+        "enabled": true,
+        "description": "Monitor public ghostbin for security content",
+        "api_endpoint": "https://ghostbin.co/recent",
+        "scraping_interval": 3600,
+        "tags": ["ghostbin", "dumps", "leaks", "public"]
+      }
+    ],
+    "security_forums": [
+      {
+        "id": "hackforums_public",
+        "name": "HackForums Public",
+        "type": "forum",
+        "enabled": true,
+        "description": "Monitor public sections of HackForums",
+        "url": "https://hackforums.net",
+        "scraping_interval": 7200,
+        "tags": ["forum", "hacking", "security", "public"]
+      },
+      {
+        "id": "wilderssecurity",
+        "name": "Wilders Security Forums",
+        "type": "forum",
+        "enabled": true,
+        "description": "Wilders Security Forums",
+        "api_endpoint": "https://www.wilderssecurity.com/external.php?type=RSS2",
+        "scraping_interval": 7200,
+        "tags": ["forum", "security", "malware"]
+      }
+    ],
+    "threat_intelligence": [
+      {
+        "id": "alienvault_otx",
+        "name": "AlienVault OTX",
+        "type": "threat_intel",
+        "enabled": true,
+        "description": "AlienVault Open Threat Exchange",
+        "api_endpoint": "https://otx.alienvault.com/api/v1/pulses/subscribed",
+        "scraping_interval": 3600,
+        "tags": ["otx", "threat_intelligence", "pulses"]
+      },
+      {
+        "id": "recorded_future",
+        "name": "Recorded Future Blog",
+        "type": "threat_intel",
+        "enabled": true,
+        "description": "Recorded Future threat intelligence insights",
+        "api_endpoint": "https://www.recordedfuture.com/feed",
+        "scraping_interval": 7200,
+        "tags": ["recorded_future", "threat_intelligence", "research"]
+      }
+    ],
+    "malware_analysis": [
+      {
+        "id": "malwarebytes_labs",
+        "name": "Malwarebytes Labs",
+        "type": "malware",
+        "enabled": true,
+        "description": "Malwarebytes threat research and analysis",
+        "api_endpoint": "https://blog.malwarebytes.com/feed/",
+        "scraping_interval": 7200,
+        "tags": ["malwarebytes", "malware", "threats", "research"]
+      },
+      {
+        "id": "eset_security",
+        "name": "ESET Security Blog",
+        "type": "malware",
+        "enabled": true,
+        "description": "ESET security research and threat analysis",
+        "api_endpoint": "https://www.welivesecurity.com/feed/",
+        "scraping_interval": 7200,
+        "tags": ["eset", "malware", "threats", "research"]
+      },
+      {
+        "id": "kaspersky_securelist",
+        "name": "Kaspersky Securelist",
+        "type": "malware",
+        "enabled": true,
+        "description": "Kaspersky threat research and analysis",
+        "api_endpoint": "https://securelist.com/feed/",
+        "scraping_interval": 7200,
+        "tags": ["kaspersky", "malware", "threats", "research"]
+      }
+    ],
+    "government_alerts": [
+      {
+        "id": "cisa_alerts",
+        "name": "CISA Alerts",
+        "type": "government",
+        "enabled": true,
+        "description": "US Cybersecurity and Infrastructure Security Agency alerts",
+        "api_endpoint": "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+        "scraping_interval": 3600,
+        "tags": ["cisa", "government", "alerts", "cybersecurity"]
+      },
+      {
+        "id": "us_cert",
+        "name": "US-CERT",
+        "type": "government",
+        "enabled": true,
+        "description": "US Computer Emergency Readiness Team",
+        "api_endpoint": "https://www.us-cert.gov/ncas/alerts.xml",
+        "scraping_interval": 3600,
+        "tags": ["us-cert", "government", "alerts", "vulnerabilities"]
+      }
+    ]
+  },
+  "threat_keywords": {
+    "zero_day": [
+      "zero-day", "0day", "zero day", "unpatched", "no patch", "exploit available",
+      "proof of concept", "PoC", "working exploit", "exploit code"
+    ],
+    "critical_vulnerability": [
+      "critical", "severe", "high severity", "remote code execution", "RCE",
+      "privilege escalation", "authentication bypass", "SQL injection", "XSS"
+    ],
+    "data_breach": [
+      "data breach", "leak", "stolen", "compromised", "exposed", "dumped",
+      "credentials", "passwords", "personal data", "PII", "credit cards"
+    ],
+    "malware": [
+      "malware", "ransomware", "trojan", "virus", "worm", "backdoor",
+      "keylogger", "spyware", "rootkit", "botnet", "DDoS"
+    ],
+    "exploit": [
+      "exploit", "exploitation", "vulnerability", "CVE", "security flaw",
+      "bug", "weakness", "attack vector", "payload"
+    ]
+  },
+  "threat_scoring": {
+    "source_trust_levels": {
+      "government": 0.9,
+      "research": 0.8,
+      "vendor": 0.7,
+      "news": 0.6,
+      "forum": 0.4,
+      "paste": 0.3
+    },
+    "keyword_weights": {
+      "zero_day": 0.9,
+      "critical_vulnerability": 0.8,
+      "data_breach": 0.7,
+      "malware": 0.6,
+      "exploit": 0.5
+    },
+    "severity_thresholds": {
+      "critical": 0.9,
+      "high": 0.7,
+      "medium": 0.5,
+      "low": 0.3
+    }
+  },
+  "alerting": {
+    "enabled": true,
+    "high_severity_threshold": 0.8,
+    "notification_channels": ["email", "webhook"],
+    "email_settings": {
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "use_tls": true
+    },
+    "webhook_settings": {
+      "url": "",
+      "headers": {}
+    }
+  }
+}
