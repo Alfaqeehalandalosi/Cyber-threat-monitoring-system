@@ -676,13 +676,15 @@ class ThreatDataCollector:
             # Skip if it's a known false positive
             if company in false_positives:
                 continue
-            # Skip single words that are likely not company names
-            if len(company.split()) == 1 and len(company) < 6:
+            # Skip single words that are likely not company names (but allow longer ones)
+            if len(company.split()) == 1 and len(company) < 5:
                 continue
-            # Skip if it's just a common word
-            if company.lower() in ['hackers', 'attackers', 'global', 'brute', 'force', 'wave', 'before', 'shift', 'hit']:
+            # Skip if it's just a common word (but be more selective)
+            if company.lower() in ['hackers', 'attackers', 'global', 'brute', 'force', 'wave', 'before', 'shift', 'hit', 'latest', 'details']:
                 continue
-            filtered_companies.append(company)
+            # Keep company names that look legitimate
+            if len(company.split()) >= 2 or len(company) >= 6:
+                filtered_companies.append(company)
         
         indicators['company_names'] = list(set(filtered_companies))
         
