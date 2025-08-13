@@ -659,10 +659,32 @@ class ThreatDataCollector:
             r'\b[A-Z][a-z]+ [A-Z][a-z]+\b',  # Two-word company names like "Allianz Life"
             r'\b[A-Z][a-z]+(?:[A-Z][a-z]+)*\b'  # CamelCase company names like "Fortinet"
         ]
+        
+        # Filter out common false positives
+        false_positives = {
+            'Hackers', 'Attackers', 'Global', 'Brute', 'Force', 'Wave', 'Before', 
+            'Shift', 'Hit', 'Life', 'Inc', 'Corp', 'LLC', 'Ltd', 'Company', 
+            'Corporation', 'Technologies', 'Systems', 'Security'
+        }
         for pattern in company_patterns:
             companies = re.findall(pattern, content)
             indicators['company_names'].extend(companies)
-        indicators['company_names'] = list(set(indicators['company_names']))
+        
+        # Filter out false positives and clean up
+        filtered_companies = []
+        for company in indicators['company_names']:
+            # Skip if it's a known false positive
+            if company in false_positives:
+                continue
+            # Skip single words that are likely not company names
+            if len(company.split()) == 1 and len(company) < 6:
+                continue
+            # Skip if it's just a common word
+            if company.lower() in ['hackers', 'attackers', 'global', 'brute', 'force', 'wave', 'before', 'shift', 'hit']:
+                continue
+            filtered_companies.append(company)
+        
+        indicators['company_names'] = list(set(filtered_companies))
         
         # Extract GitHub repositories
         github_patterns = [
