@@ -208,37 +208,10 @@ class ThreatDataCollector:
                     logger.warning(f"Failed to scrape {url}: {e}")
                     continue
             
-            # If no threats found from real sources, add some realistic fallback data
+            # If no threats found from hacker forums, try mainstream cybersecurity news
             if len(articles) == 0:
-                logger.info("No threats found from real sources, adding fallback data")
-                fallback_threats = [
-                    {
-                        'title': 'Hacker Forum: Zero-Day Exploit Discussion',
-                        'content': 'Active discussion about zero-day vulnerabilities and exploit development techniques',
-                        'source': 'Hacker Forum',
-                        'source_type': 'hacker_forum',
-                        'published': datetime.now().isoformat(),
-                        'threat_score': 0.85,
-                        'threat_type': 'zero_day'
-                    },
-                    {
-                        'title': 'Hacker Forum: Ransomware Analysis',
-                        'content': 'Analysis of new ransomware variants and evasion techniques',
-                        'source': 'Hacker Forum',
-                        'source_type': 'hacker_forum',
-                        'published': datetime.now().isoformat(),
-                        'threat_score': 0.78,
-                        'threat_type': 'malware'
-                    }
-                ]
-                
-                for threat in fallback_threats:
-                    threat['hash_id'] = self.generate_hash_id(
-                        threat['title'], 
-                        threat['source'], 
-                        threat['published']
-                    )
-                    articles.append(threat)
+                logger.info("No threats found from hacker forums, trying mainstream cybersecurity news")
+                articles.extend(await self._collect_mainstream_cybersecurity_news())
             
             duration = time.time() - start_time
             await self.log_collection('hacker_forum', len(articles), len(articles), duration, 'success')
@@ -248,6 +221,98 @@ class ThreatDataCollector:
             duration = time.time() - start_time
             await self.log_collection('hacker_forum', 0, 0, duration, 'error', str(e))
             logger.error(f"Error collecting hacker forum data: {e}")
+        
+        return articles
+    
+    async def _collect_mainstream_cybersecurity_news(self) -> List[Dict[str, Any]]:
+        """Collect real cybersecurity news from mainstream sources"""
+        articles = []
+        
+        try:
+            # Mainstream cybersecurity news sources that work reliably
+            news_sources = [
+                {
+                    'url': 'https://www.bleepingcomputer.com/',
+                    'name': 'Bleeping Computer',
+                    'type': 'mainstream_news'
+                },
+                {
+                    'url': 'https://thehackernews.com/',
+                    'name': 'The Hacker News',
+                    'type': 'mainstream_news'
+                },
+                {
+                    'url': 'https://www.darkreading.com/',
+                    'name': 'Dark Reading',
+                    'type': 'mainstream_news'
+                },
+                {
+                    'url': 'https://www.securityweek.com/',
+                    'name': 'Security Week',
+                    'type': 'mainstream_news'
+                },
+                {
+                    'url': 'https://threatpost.com/',
+                    'name': 'Threatpost',
+                    'type': 'mainstream_news'
+                }
+            ]
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+            }
+            
+            for source in news_sources:
+                try:
+                    async with self.session.get(source['url'], headers=headers, timeout=15) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            
+                            # Look for article titles and content
+                            # Common patterns for news sites
+                            title_patterns = [
+                                r'<h[1-6][^>]*>([^<]*?(?:vulnerability|exploit|malware|ransomware|breach|attack|hack|cyber|security)[^<]*)</h[1-6]>',
+                                r'<title[^>]*>([^<]*?(?:vulnerability|exploit|malware|ransomware|breach|attack|hack|cyber|security)[^<]*)</title>',
+                                r'<a[^>]*href[^>]*>([^<]*?(?:vulnerability|exploit|malware|ransomware|breach|attack|hack|cyber|security)[^<]*)</a>'
+                            ]
+                            
+                            for pattern in title_patterns:
+                                matches = re.findall(pattern, content, re.IGNORECASE)
+                                for match in matches[:3]:  # Take first 3 matches
+                                    if len(match.strip()) > 20:  # Only meaningful titles
+                                        threat_score = self._calculate_threat_score(match)
+                                        
+                                        if threat_score > 0.3:  # Higher threshold for news
+                                            article = {
+                                                'title': match.strip()[:100],
+                                                'content': f"Latest cybersecurity news from {source['name']}: {match.strip()}",
+                                                'source': source['name'],
+                                                'source_type': source['type'],
+                                                'published': datetime.now().isoformat(),
+                                                'threat_score': threat_score,
+                                                'threat_type': self._classify_threat_type(match)
+                                            }
+                                            article['hash_id'] = self.generate_hash_id(
+                                                article['title'], 
+                                                article['source'], 
+                                                article['published']
+                                            )
+                                            articles.append(article)
+                            
+                            logger.info(f"Scraped {source['name']}: Found {len([a for a in articles if a['source'] == source['name']])} threats")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to scrape {source['name']}: {e}")
+                    continue
+            
+            logger.info(f"Collected {len(articles)} articles from mainstream cybersecurity news")
+            
+        except Exception as e:
+            logger.error(f"Error collecting mainstream cybersecurity news: {e}")
         
         return articles
     
@@ -319,28 +384,10 @@ class ThreatDataCollector:
                     logger.warning(f"Failed to scrape {url}: {e}")
                     continue
             
-            # If no threats found from real sources, add some realistic fallback data
+            # If no threats found from ransomware leaks, try mainstream cybersecurity news
             if len(articles) == 0:
-                logger.info("No ransomware leaks found from real sources, adding fallback data")
-                fallback_threats = [
-                    {
-                        'title': 'Ransomware Leak: Company Data Exposed',
-                        'content': 'Ransomware group has leaked sensitive company data including customer information',
-                        'source': 'Ransomware Leak Site',
-                        'source_type': 'ransomware_leak',
-                        'published': datetime.now().isoformat(),
-                        'threat_score': 0.88,
-                        'threat_type': 'data_breach'
-                    }
-                ]
-                
-                for threat in fallback_threats:
-                    threat['hash_id'] = self.generate_hash_id(
-                        threat['title'], 
-                        threat['source'], 
-                        threat['published']
-                    )
-                    articles.append(threat)
+                logger.info("No ransomware leaks found, trying mainstream cybersecurity news")
+                articles.extend(await self._collect_mainstream_cybersecurity_news())
             
             duration = time.time() - start_time
             await self.log_collection('ransomware_leak', len(articles), len(articles), duration, 'success')
@@ -421,28 +468,10 @@ class ThreatDataCollector:
                     logger.warning(f"Failed to scrape {url}: {e}")
                     continue
             
-            # If no threats found from real sources, add some realistic fallback data
+            # If no threats found from paste sites, try mainstream cybersecurity news
             if len(articles) == 0:
-                logger.info("No paste site threats found from real sources, adding fallback data")
-                fallback_threats = [
-                    {
-                        'title': 'Paste Site: Credential Dump Analysis',
-                        'content': 'Large credential dump found on paste site with millions of compromised accounts',
-                        'source': 'Paste Site',
-                        'source_type': 'paste_site',
-                        'published': datetime.now().isoformat(),
-                        'threat_score': 0.75,
-                        'threat_type': 'data_breach'
-                    }
-                ]
-                
-                for threat in fallback_threats:
-                    threat['hash_id'] = self.generate_hash_id(
-                        threat['title'], 
-                        threat['source'], 
-                        threat['published']
-                    )
-                    articles.append(threat)
+                logger.info("No paste site threats found, trying mainstream cybersecurity news")
+                articles.extend(await self._collect_mainstream_cybersecurity_news())
             
             duration = time.time() - start_time
             await self.log_collection('paste_site', len(articles), len(articles), duration, 'success')
@@ -522,28 +551,10 @@ class ThreatDataCollector:
                     logger.warning(f"Failed to query GitHub for '{query}': {e}")
                     continue
             
-            # If no threats found from real sources, add some realistic fallback data
+            # If no threats found from GitHub, try mainstream cybersecurity news
             if len(articles) == 0:
-                logger.info("No GitHub threats found from real sources, adding fallback data")
-                fallback_threats = [
-                    {
-                        'title': 'GitHub: CVE-2024-1234 Exploit PoC',
-                        'content': 'Proof of concept exploit for CVE-2024-1234 now available on GitHub',
-                        'source': 'GitHub',
-                        'source_type': 'github',
-                        'published': datetime.now().isoformat(),
-                        'threat_score': 0.82,
-                        'threat_type': 'exploit'
-                    }
-                ]
-                
-                for threat in fallback_threats:
-                    threat['hash_id'] = self.generate_hash_id(
-                        threat['title'], 
-                        threat['source'], 
-                        threat['published']
-                    )
-                    articles.append(threat)
+                logger.info("No GitHub threats found, trying mainstream cybersecurity news")
+                articles.extend(await self._collect_mainstream_cybersecurity_news())
             
             duration = time.time() - start_time
             await self.log_collection('github', len(articles), len(articles), duration, 'success')
