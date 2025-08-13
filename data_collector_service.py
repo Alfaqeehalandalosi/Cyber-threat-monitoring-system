@@ -764,6 +764,7 @@ class ThreatDataCollector:
                     
                     new_articles += 1
                     logger.info(f"Stored article: {article['title'][:50]}...")
+                    logger.info(f"Stored indicators: {article.get('indicators', {})}")
                         
                 except Exception as e:
                     logger.error(f"Error storing article {article['title']}: {e}")
