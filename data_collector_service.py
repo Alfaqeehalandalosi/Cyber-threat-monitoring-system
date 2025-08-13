@@ -10,6 +10,7 @@ import sqlite3
 import json
 import logging
 import time
+import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import os
@@ -124,35 +125,71 @@ class ThreatDataCollector:
         articles = []
         
         try:
-            # Mock hacker forum data (replace with real scraping)
-            forum_articles = [
-                {
-                    'title': 'Critical Zero-Day Exploit for Windows Systems',
-                    'content': 'A critical zero-day vulnerability has been discovered that allows remote code execution on Windows systems.',
-                    'source': 'Hacker Forum',
-                    'source_type': 'hacker_forum',
-                    'published': datetime.now().isoformat(),
-                    'threat_score': 0.95,
-                    'threat_type': 'zero_day'
-                },
-                {
-                    'title': 'New Ransomware Variant Analysis',
-                    'content': 'Analysis of new ransomware variant targeting healthcare systems.',
-                    'source': 'Hacker Forum',
-                    'source_type': 'hacker_forum',
-                    'published': datetime.now().isoformat(),
-                    'threat_score': 0.87,
-                    'threat_type': 'malware'
-                }
+            # Real hacker forum sources
+            forum_urls = [
+                "https://exploit.in/index.php",
+                "https://xss.is/index.php", 
+                "https://breachforums.st/index.php",
+                "https://0day.today/exploit",
+                "https://www.nulled.to/forum/10-security-and-hacking/",
+                "https://hackforums.net/forumdisplay.php?fid=45",
+                "https://cracked.to/Forum-Hacking-Tutorials",
+                "https://sinister.ly/Forum-Hacking-Tutorials",
+                "https://leakbase.pw/",
+                "https://www.blackhatworld.com/forums/white-hat-seo.58/"
             ]
             
-            for article in forum_articles:
-                article['hash_id'] = self.generate_hash_id(
-                    article['title'], 
-                    article['source'], 
-                    article['published']
-                )
-                articles.append(article)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            for url in forum_urls:
+                try:
+                    async with self.session.get(url, headers=headers, timeout=10) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            
+                            # Extract threat-related content using regex patterns
+                            threat_patterns = [
+                                r'(?i)(zero.?day|0day|exploit|vulnerability|malware|ransomware|breach|hack|attack)',
+                                r'(?i)(CVE-\d{4}-\d+)',
+                                r'(?i)(remote.?code.?execution|RCE|sql.?injection|XSS|CSRF)',
+                                r'(?i)(privilege.?escalation|privilege.?escalation)',
+                                r'(?i)(data.?breach|leak|stolen|compromised|dumped)'
+                            ]
+                            
+                            # Find matches in content
+                            for pattern in threat_patterns:
+                                matches = re.findall(pattern, content)
+                                if matches:
+                                    # Create threat article from found content
+                                    threat_content = ' '.join(matches[:5])  # Take first 5 matches
+                                    
+                                    # Calculate threat score based on keywords
+                                    threat_score = self._calculate_threat_score(threat_content)
+                                    
+                                    if threat_score > 0.3:  # Only include significant threats
+                                        article = {
+                                            'title': f'Hacker Forum Threat: {pattern}',
+                                            'content': threat_content[:500],  # Limit content length
+                                            'source': url,
+                                            'source_type': 'hacker_forum',
+                                            'published': datetime.now().isoformat(),
+                                            'threat_score': threat_score,
+                                            'threat_type': self._classify_threat_type(threat_content)
+                                        }
+                                        article['hash_id'] = self.generate_hash_id(
+                                            article['title'], 
+                                            article['source'], 
+                                            article['published']
+                                        )
+                                        articles.append(article)
+                            
+                            logger.info(f"Scraped {url}: Found {len([a for a in articles if a['source'] == url])} threats")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to scrape {url}: {e}")
+                    continue
             
             duration = time.time() - start_time
             await self.log_collection('hacker_forum', len(articles), len(articles), duration, 'success')
@@ -171,26 +208,67 @@ class ThreatDataCollector:
         articles = []
         
         try:
-            # Mock ransomware leak data
-            leak_articles = [
-                {
-                    'title': 'New Ransomware Leak: Company Data Exposed',
-                    'content': 'Ransomware group has leaked sensitive company data including customer information.',
-                    'source': 'Ransomware Leak Site',
-                    'source_type': 'ransomware_leak',
-                    'published': datetime.now().isoformat(),
-                    'threat_score': 0.88,
-                    'threat_type': 'data_breach'
-                }
+            # Real ransomware leak site URLs
+            leak_urls = [
+                "https://lockbitfiles.com/",
+                "https://blackcatleaks.com/",
+                "https://blackbasta.net/",
+                "https://medusaleaks.com/",
+                "https://playleaks.com/",
+                "https://bianliannews.com/",
+                "https://royalleaks.com/",
+                "https://snatchleaks.com/",
+                "https://cubaleaks.com/",
+                "https://vicesocietyleaks.com/"
             ]
             
-            for article in leak_articles:
-                article['hash_id'] = self.generate_hash_id(
-                    article['title'], 
-                    article['source'], 
-                    article['published']
-                )
-                articles.append(article)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            for url in leak_urls:
+                try:
+                    async with self.session.get(url, headers=headers, timeout=10) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            
+                            # Look for data breach indicators
+                            breach_patterns = [
+                                r'(?i)(company|organization|corporation|enterprise)',
+                                r'(?i)(data.?breach|leak|stolen|compromised|dumped)',
+                                r'(?i)(customer|user|employee|personal)',
+                                r'(?i)(email|password|credential|account)',
+                                r'(?i)(ransom|payment|bitcoin|cryptocurrency)'
+                            ]
+                            
+                            for pattern in breach_patterns:
+                                matches = re.findall(pattern, content)
+                                if matches:
+                                    breach_content = ' '.join(matches[:5])
+                                    threat_score = self._calculate_threat_score(breach_content)
+                                    
+                                    if threat_score > 0.4:  # Higher threshold for leak sites
+                                        article = {
+                                            'title': f'Ransomware Leak: {pattern}',
+                                            'content': breach_content[:500],
+                                            'source': url,
+                                            'source_type': 'ransomware_leak',
+                                            'published': datetime.now().isoformat(),
+                                            'threat_score': threat_score,
+                                            'threat_type': 'data_breach'
+                                        }
+                                        article['hash_id'] = self.generate_hash_id(
+                                            article['title'], 
+                                            article['source'], 
+                                            article['published']
+                                        )
+                                        articles.append(article)
+                            
+                            logger.info(f"Scraped {url}: Found {len([a for a in articles if a['source'] == url])} leaks")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to scrape {url}: {e}")
+                    continue
             
             duration = time.time() - start_time
             await self.log_collection('ransomware_leak', len(articles), len(articles), duration, 'success')
@@ -209,26 +287,67 @@ class ThreatDataCollector:
         articles = []
         
         try:
-            # Mock paste site data
-            paste_articles = [
-                {
-                    'title': 'Paste Site: Credential Dump Analysis',
-                    'content': 'Large credential dump found on paste site with millions of compromised accounts.',
-                    'source': 'Paste Site',
-                    'source_type': 'paste_site',
-                    'published': datetime.now().isoformat(),
-                    'threat_score': 0.75,
-                    'threat_type': 'data_breach'
-                }
+            # Real paste site URLs
+            paste_urls = [
+                "https://pastebin.com/archive",
+                "https://ghostbin.com/pastes",
+                "https://paste.ee/latest",
+                "https://justpaste.it/en/latest",
+                "https://hastebin.com/",
+                "https://rentry.co/",
+                "https://dumpz.org/en/latest/",
+                "https://paste.org.ru/",
+                "https://paste2.org/",
+                "https://ideone.com/recent"
             ]
             
-            for article in paste_articles:
-                article['hash_id'] = self.generate_hash_id(
-                    article['title'], 
-                    article['source'], 
-                    article['published']
-                )
-                articles.append(article)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            for url in paste_urls:
+                try:
+                    async with self.session.get(url, headers=headers, timeout=10) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            
+                            # Look for credential dumps and exploits
+                            paste_patterns = [
+                                r'(?i)(email|password|credential|account|login)',
+                                r'(?i)(exploit|vulnerability|PoC|proof.?of.?concept)',
+                                r'(?i)(sql.?injection|XSS|CSRF|buffer.?overflow)',
+                                r'(?i)(malware|virus|trojan|backdoor)',
+                                r'(?i)(CVE-\d{4}-\d+)'
+                            ]
+                            
+                            for pattern in paste_patterns:
+                                matches = re.findall(pattern, content)
+                                if matches:
+                                    paste_content = ' '.join(matches[:5])
+                                    threat_score = self._calculate_threat_score(paste_content)
+                                    
+                                    if threat_score > 0.3:
+                                        article = {
+                                            'title': f'Paste Site: {pattern}',
+                                            'content': paste_content[:500],
+                                            'source': url,
+                                            'source_type': 'paste_site',
+                                            'published': datetime.now().isoformat(),
+                                            'threat_score': threat_score,
+                                            'threat_type': self._classify_threat_type(paste_content)
+                                        }
+                                        article['hash_id'] = self.generate_hash_id(
+                                            article['title'], 
+                                            article['source'], 
+                                            article['published']
+                                        )
+                                        articles.append(article)
+                            
+                            logger.info(f"Scraped {url}: Found {len([a for a in articles if a['source'] == url])} threats")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to scrape {url}: {e}")
+                    continue
             
             duration = time.time() - start_time
             await self.log_collection('paste_site', len(articles), len(articles), duration, 'success')
@@ -247,26 +366,66 @@ class ThreatDataCollector:
         articles = []
         
         try:
-            # Mock GitHub data
-            github_articles = [
-                {
-                    'title': 'GitHub: CVE-2024-1234 Exploit PoC',
-                    'content': 'Proof of concept exploit for CVE-2024-1234 now available on GitHub.',
-                    'source': 'GitHub',
-                    'source_type': 'github',
-                    'published': datetime.now().isoformat(),
-                    'threat_score': 0.82,
-                    'threat_type': 'exploit'
-                }
+            # GitHub search queries for exploits and vulnerabilities
+            github_queries = [
+                "exploit language:Python",
+                "PoC CVE",
+                "CVE-2025",
+                "0day exploit",
+                "privilege escalation",
+                "rce exploit",
+                "sql injection exploit",
+                "xss exploit",
+                "csrf exploit",
+                "buffer overflow exploit"
             ]
             
-            for article in github_articles:
-                article['hash_id'] = self.generate_hash_id(
-                    article['title'], 
-                    article['source'], 
-                    article['published']
-                )
-                articles.append(article)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            for query in github_queries:
+                try:
+                    # GitHub search API endpoint
+                    search_url = f"https://api.github.com/search/repositories?q={query}&sort=updated&order=desc&per_page=10"
+                    
+                    async with self.session.get(search_url, headers=headers, timeout=10) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            
+                            for repo in data.get('items', []):
+                                repo_name = repo.get('name', '')
+                                repo_description = repo.get('description', '')
+                                repo_url = repo.get('html_url', '')
+                                created_at = repo.get('created_at', '')
+                                
+                                # Analyze repository for threat indicators
+                                repo_content = f"{repo_name} {repo_description}"
+                                threat_score = self._calculate_threat_score(repo_content)
+                                
+                                if threat_score > 0.4:  # Only significant threats
+                                    article = {
+                                        'title': f'GitHub: {repo_name}',
+                                        'content': repo_description[:500] if repo_description else f"Repository: {repo_name}",
+                                        'source': repo_url,
+                                        'source_type': 'github',
+                                        'published': created_at,
+                                        'threat_score': threat_score,
+                                        'threat_type': self._classify_threat_type(repo_content)
+                                    }
+                                    article['hash_id'] = self.generate_hash_id(
+                                        article['title'], 
+                                        article['source'], 
+                                        article['published']
+                                    )
+                                    articles.append(article)
+                            
+                            logger.info(f"GitHub query '{query}': Found {len([a for a in articles if query in a['title']])} threats")
+                            
+                except Exception as e:
+                    logger.warning(f"Failed to query GitHub for '{query}': {e}")
+                    continue
             
             duration = time.time() - start_time
             await self.log_collection('github', len(articles), len(articles), duration, 'success')
@@ -278,6 +437,54 @@ class ThreatDataCollector:
             logger.error(f"Error collecting GitHub data: {e}")
         
         return articles
+    
+    def _calculate_threat_score(self, content: str) -> float:
+        """Calculate threat score based on content analysis"""
+        content_lower = content.lower()
+        score = 0.0
+        
+        # High severity keywords
+        high_severity = ['zero-day', '0day', 'zero day', 'critical', 'remote code execution', 'rce']
+        for keyword in high_severity:
+            if keyword in content_lower:
+                score += 0.2
+        
+        # Medium severity keywords
+        medium_severity = ['exploit', 'vulnerability', 'malware', 'ransomware', 'breach', 'attack']
+        for keyword in medium_severity:
+            if keyword in content_lower:
+                score += 0.1
+        
+        # CVE references
+        cve_matches = re.findall(r'CVE-\d{4}-\d+', content, re.IGNORECASE)
+        score += len(cve_matches) * 0.15
+        
+        # Code indicators
+        code_indicators = ['function', 'class', 'def', 'import', 'require', 'include']
+        for indicator in code_indicators:
+            if indicator in content_lower:
+                score += 0.05
+        
+        return min(1.0, score)
+    
+    def _classify_threat_type(self, content: str) -> str:
+        """Classify threat type based on content"""
+        content_lower = content.lower()
+        
+        if any(word in content_lower for word in ['zero-day', '0day', 'zero day']):
+            return 'zero_day'
+        elif any(word in content_lower for word in ['remote code execution', 'rce']):
+            return 'remote_code_execution'
+        elif any(word in content_lower for word in ['data breach', 'leak', 'stolen', 'compromised']):
+            return 'data_breach'
+        elif any(word in content_lower for word in ['malware', 'ransomware', 'trojan', 'virus']):
+            return 'malware'
+        elif any(word in content_lower for word in ['exploit', 'poc', 'proof of concept']):
+            return 'exploit'
+        elif any(word in content_lower for word in ['sql injection', 'xss', 'csrf']):
+            return 'web_vulnerability'
+        else:
+            return 'general_threat'
     
     async def store_threats(self, articles: List[Dict[str, Any]]) -> int:
         """Store threats in database"""
