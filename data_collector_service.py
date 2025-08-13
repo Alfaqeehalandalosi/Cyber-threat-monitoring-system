@@ -186,7 +186,7 @@ class ThreatDataCollector:
                                         
                                         article = {
                                             'title': f'Hacker Forum Threat: {pattern}',
-                                            'content': threat_content[:300],  # Limit content length
+                                            'content': threat_content[:1000],  # Increased content length for better indicator extraction
                                             'source': url,
                                             'source_type': 'hacker_forum',
                                             'published': datetime.now().isoformat(),
@@ -375,7 +375,7 @@ class ThreatDataCollector:
                                         
                                         article = {
                                             'title': f'Ransomware Leak: {pattern}',
-                                            'content': breach_content[:500],
+                                            'content': breach_content[:1000],  # Increased content length
                                             'source': url,
                                             'source_type': 'ransomware_leak',
                                             'published': datetime.now().isoformat(),
@@ -463,7 +463,7 @@ class ThreatDataCollector:
                                         
                                         article = {
                                             'title': f'Paste Site: {pattern}',
-                                            'content': paste_content[:500],
+                                            'content': paste_content[:1000],  # Increased content length
                                             'source': url,
                                             'source_type': 'paste_site',
                                             'published': datetime.now().isoformat(),
@@ -550,7 +550,7 @@ class ThreatDataCollector:
                                     
                                     article = {
                                         'title': f'GitHub: {repo_name}',
-                                        'content': repo_description[:500] if repo_description else f"Repository: {repo_name}",
+                                        'content': repo_description[:1000] if repo_description else f"Repository: {repo_name}",
                                         'source': repo_url,
                                         'source_type': 'github',
                                         'published': created_at,
@@ -655,7 +655,9 @@ class ThreatDataCollector:
         company_patterns = [
             r'\b[A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Corporation|Technologies|Systems|Security)\b',
             r'\b[A-Z][a-z]+ [A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Corporation)\b',
-            r'\b[A-Z]{2,}(?:[A-Z][a-z]+)* (?:Inc|Corp|LLC|Ltd|Company|Corporation)\b'
+            r'\b[A-Z]{2,}(?:[A-Z][a-z]+)* (?:Inc|Corp|LLC|Ltd|Company|Corporation)\b',
+            r'\b[A-Z][a-z]+ [A-Z][a-z]+\b',  # Two-word company names like "Allianz Life"
+            r'\b[A-Z][a-z]+(?:[A-Z][a-z]+)*\b'  # CamelCase company names like "Fortinet"
         ]
         for pattern in company_patterns:
             companies = re.findall(pattern, content)
