@@ -49,8 +49,19 @@ def fix_database_schema():
         
         if 'hash_id' not in column_names:
             missing_columns.append('hash_id')
-            cursor.execute("ALTER TABLE threats ADD COLUMN hash_id TEXT UNIQUE")
-            print("✅ Added hash_id column")
+            try:
+                # First add the column without UNIQUE constraint
+                cursor.execute("ALTER TABLE threats ADD COLUMN hash_id TEXT")
+                print("✅ Added hash_id column (without UNIQUE constraint)")
+                
+                # Then create a unique index on the column
+                cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_threats_hash_id ON threats(hash_id)")
+                print("✅ Created unique index on hash_id")
+            except sqlite3.OperationalError as e:
+                print(f"⚠️ Warning: Could not add hash_id column: {e}")
+                # Remove from missing_columns if we couldn't add it
+                if 'hash_id' in missing_columns:
+                    missing_columns.remove('hash_id')
         
         # Check system_status table
         cursor.execute("PRAGMA table_info(system_status)")
