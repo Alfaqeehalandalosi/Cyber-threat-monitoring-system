@@ -388,43 +388,38 @@ async def get_hacker_grade_indicators(
 ) -> Dict[str, Any]:
     """Get extracted threat indicators from hacker-grade sources"""
     try:
-        # Get threat data
-        threat_data = await get_hacker_grade_threat_intelligence_endpoint(force_refresh=True, token_verified=token_verified)
-        articles = threat_data.get('threat_articles', [])
+        # Get threats directly from database
+        threats = await db.get_recent_threats(limit=100, hours=24)
         
         # Collect all indicators
         all_indicators = {
-            'cve_ids': set(),
+            'cve_identifiers': set(),
+            'company_names': set(),
+            'github_repositories': set(),
             'ip_addresses': set(),
-            'domains': set(),
             'email_addresses': set(),
-            'hashes': set(),
-            'urls': set(),
-            'file_paths': set(),
-            'commands': set(),
-            'github_repos': set(),
-            'company_names': set()
+            'file_hashes': set(),
+            'urls': set()
         }
         
-        for article in articles:
-            indicators = article.get('indicators', {})
+        for threat in threats:
+            indicators = threat.get('indicators', {})
+            if isinstance(indicators, str):
+                try:
+                    indicators = json.loads(indicators)
+                except:
+                    indicators = {}
+            
             for indicator_type, values in indicators.items():
-                if indicator_type in all_indicators:
+                if indicator_type in all_indicators and isinstance(values, list):
                     all_indicators[indicator_type].update(values)
-            
-            # Extract additional indicators from content
-            content = f"{article.get('title', '')} {article.get('content', '')}"
-            
-            # Extract company names
-            company_matches = re.findall(r'\b[A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Corporation)\b', content)
-            all_indicators['company_names'].update(company_matches)
-            
-            # Extract GitHub repos
-            github_matches = re.findall(r'github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-]+', content)
-            all_indicators['github_repos'].update(github_matches)
         
-        # Convert sets to lists
-        result = {k: list(v) for k, v in all_indicators.items()}
+        # Convert sets to lists and filter out empty values
+        result = {}
+        for k, v in all_indicators.items():
+            filtered_values = [val for val in v if val and len(str(val).strip()) > 0]
+            result[k] = filtered_values
+        
         result['total_indicators'] = sum(len(v) for v in result.values())
         result['extraction_timestamp'] = datetime.now().isoformat()
         

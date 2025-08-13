@@ -181,6 +181,9 @@ class ThreatDataCollector:
                                     threat_score = self._calculate_threat_score(threat_content)
                                     
                                     if threat_score > 0.2:  # Lower threshold
+                                        # Extract indicators from content
+                                        indicators = self._extract_indicators(threat_content)
+                                        
                                         article = {
                                             'title': f'Hacker Forum Threat: {pattern}',
                                             'content': threat_content[:300],  # Limit content length
@@ -188,7 +191,8 @@ class ThreatDataCollector:
                                             'source_type': 'hacker_forum',
                                             'published': datetime.now().isoformat(),
                                             'threat_score': threat_score,
-                                            'threat_type': self._classify_threat_type(threat_content)
+                                            'threat_type': self._classify_threat_type(threat_content),
+                                            'indicators': indicators
                                         }
                                         article['hash_id'] = self.generate_hash_id(
                                             article['title'], 
@@ -287,6 +291,9 @@ class ThreatDataCollector:
                                         threat_score = self._calculate_threat_score(match)
                                         
                                         if threat_score > 0.3:  # Higher threshold for news
+                                            # Extract indicators from content
+                                            indicators = self._extract_indicators(match)
+                                            
                                             article = {
                                                 'title': match.strip()[:100],
                                                 'content': f"Latest cybersecurity news from {source['name']}: {match.strip()}",
@@ -294,7 +301,8 @@ class ThreatDataCollector:
                                                 'source_type': source['type'],
                                                 'published': datetime.now().isoformat(),
                                                 'threat_score': threat_score,
-                                                'threat_type': self._classify_threat_type(match)
+                                                'threat_type': self._classify_threat_type(match),
+                                                'indicators': indicators
                                             }
                                             article['hash_id'] = self.generate_hash_id(
                                                 article['title'], 
@@ -362,6 +370,9 @@ class ThreatDataCollector:
                                     threat_score = self._calculate_threat_score(breach_content)
                                     
                                     if threat_score > 0.4:  # Higher threshold for leak sites
+                                        # Extract indicators from content
+                                        indicators = self._extract_indicators(breach_content)
+                                        
                                         article = {
                                             'title': f'Ransomware Leak: {pattern}',
                                             'content': breach_content[:500],
@@ -369,7 +380,8 @@ class ThreatDataCollector:
                                             'source_type': 'ransomware_leak',
                                             'published': datetime.now().isoformat(),
                                             'threat_score': threat_score,
-                                            'threat_type': 'data_breach'
+                                            'threat_type': 'data_breach',
+                                            'indicators': indicators
                                         }
                                         article['hash_id'] = self.generate_hash_id(
                                             article['title'], 
@@ -446,6 +458,9 @@ class ThreatDataCollector:
                                     threat_score = self._calculate_threat_score(paste_content)
                                     
                                     if threat_score > 0.3:
+                                        # Extract indicators from content
+                                        indicators = self._extract_indicators(paste_content)
+                                        
                                         article = {
                                             'title': f'Paste Site: {pattern}',
                                             'content': paste_content[:500],
@@ -453,7 +468,8 @@ class ThreatDataCollector:
                                             'source_type': 'paste_site',
                                             'published': datetime.now().isoformat(),
                                             'threat_score': threat_score,
-                                            'threat_type': self._classify_threat_type(paste_content)
+                                            'threat_type': self._classify_threat_type(paste_content),
+                                            'indicators': indicators
                                         }
                                         article['hash_id'] = self.generate_hash_id(
                                             article['title'], 
@@ -529,6 +545,9 @@ class ThreatDataCollector:
                                 threat_score = self._calculate_threat_score(repo_content)
                                 
                                 if threat_score > 0.4:  # Only significant threats
+                                    # Extract indicators from content
+                                    indicators = self._extract_indicators(repo_content)
+                                    
                                     article = {
                                         'title': f'GitHub: {repo_name}',
                                         'content': repo_description[:500] if repo_description else f"Repository: {repo_name}",
@@ -536,7 +555,8 @@ class ThreatDataCollector:
                                         'source_type': 'github',
                                         'published': created_at,
                                         'threat_score': threat_score,
-                                        'threat_type': self._classify_threat_type(repo_content)
+                                        'threat_type': self._classify_threat_type(repo_content),
+                                        'indicators': indicators
                                     }
                                     article['hash_id'] = self.generate_hash_id(
                                         article['title'], 
@@ -614,6 +634,78 @@ class ThreatDataCollector:
             return 'web_vulnerability'
         else:
             return 'general_threat'
+    
+    def _extract_indicators(self, content: str) -> Dict[str, Any]:
+        """Extract threat indicators from content"""
+        indicators = {
+            'cve_identifiers': [],
+            'company_names': [],
+            'github_repositories': [],
+            'ip_addresses': [],
+            'email_addresses': [],
+            'file_hashes': [],
+            'urls': []
+        }
+        
+        # Extract CVE identifiers
+        cve_matches = re.findall(r'CVE-\d{4}-\d+', content, re.IGNORECASE)
+        indicators['cve_identifiers'] = list(set(cve_matches))
+        
+        # Extract company names (common patterns)
+        company_patterns = [
+            r'\b[A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Corporation|Technologies|Systems|Security)\b',
+            r'\b[A-Z][a-z]+ [A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Corporation)\b',
+            r'\b[A-Z]{2,}(?:[A-Z][a-z]+)* (?:Inc|Corp|LLC|Ltd|Company|Corporation)\b'
+        ]
+        for pattern in company_patterns:
+            companies = re.findall(pattern, content)
+            indicators['company_names'].extend(companies)
+        indicators['company_names'] = list(set(indicators['company_names']))
+        
+        # Extract GitHub repositories
+        github_patterns = [
+            r'github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+',
+            r'https?://github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+',
+            r'github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+/blob/',
+            r'github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-_.]+/tree/'
+        ]
+        for pattern in github_patterns:
+            repos = re.findall(pattern, content)
+            indicators['github_repositories'].extend(repos)
+        indicators['github_repositories'] = list(set(indicators['github_repositories']))
+        
+        # Extract IP addresses
+        ip_patterns = [
+            r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
+            r'\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b'  # IPv6
+        ]
+        for pattern in ip_patterns:
+            ips = re.findall(pattern, content)
+            indicators['ip_addresses'].extend(ips)
+        indicators['ip_addresses'] = list(set(indicators['ip_addresses']))
+        
+        # Extract email addresses
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        emails = re.findall(email_pattern, content)
+        indicators['email_addresses'] = list(set(emails))
+        
+        # Extract file hashes (MD5, SHA1, SHA256)
+        hash_patterns = [
+            r'\b[a-fA-F0-9]{32}\b',  # MD5
+            r'\b[a-fA-F0-9]{40}\b',  # SHA1
+            r'\b[a-fA-F0-9]{64}\b'   # SHA256
+        ]
+        for pattern in hash_patterns:
+            hashes = re.findall(pattern, content)
+            indicators['file_hashes'].extend(hashes)
+        indicators['file_hashes'] = list(set(indicators['file_hashes']))
+        
+        # Extract URLs
+        url_pattern = r'https?://(?:[-\w.])+(?:[:\d]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:#(?:[\w.])*)?)?'
+        urls = re.findall(url_pattern, content)
+        indicators['urls'] = list(set(urls))
+        
+        return indicators
     
     async def store_threats(self, articles: List[Dict[str, Any]]) -> int:
         """Store threats in database"""
