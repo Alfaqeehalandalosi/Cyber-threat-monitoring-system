@@ -68,7 +68,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
 
 # Include routers
 # app.include_router(main_router, prefix="/api/v1") # This line is removed as per the edit hint
-app.include_router(hacker_grade_router, prefix="/api/v1/hacker-grade")
+app.include_router(hacker_grade_router)  # Remove the prefix since it's already in the router
 
 @app.on_event("startup")
 async def startup_event():
