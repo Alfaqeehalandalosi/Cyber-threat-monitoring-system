@@ -435,11 +435,81 @@ async def get_hacker_grade_report(
 ) -> Dict[str, Any]:
     """Get comprehensive hacker-grade threat intelligence report"""
     try:
-        # Get threat data
-        threat_data = await get_hacker_grade_threat_intelligence_endpoint(force_refresh=True, token_verified=token_verified)
+        # Get threats from database
+        threats = await db.get_recent_threats(limit=100, hours=24)
         
-        # Return the threat report
-        return threat_data.get('threat_report', {})
+        # Generate comprehensive report
+        report = {
+            'report_generated': datetime.now().isoformat(),
+            'total_threats': len(threats),
+            'threat_summary': {
+                'high_severity': len([t for t in threats if t.get('threat_score', 0) > 0.8]),
+                'medium_severity': len([t for t in threats if 0.5 <= t.get('threat_score', 0) <= 0.8]),
+                'low_severity': len([t for t in threats if t.get('threat_score', 0) < 0.5])
+            },
+            'source_breakdown': {},
+            'threat_types': {},
+            'top_threats': [],
+            'recent_indicators': {
+                'cve_identifiers': set(),
+                'company_names': set(),
+                'github_repositories': set(),
+                'ip_addresses': set(),
+                'email_addresses': set(),
+                'file_hashes': set(),
+                'urls': set()
+            }
+        }
+        
+        # Analyze threats
+        for threat in threats:
+            # Source breakdown
+            source_type = threat.get('source_type', 'unknown')
+            report['source_breakdown'][source_type] = report['source_breakdown'].get(source_type, 0) + 1
+            
+            # Threat type breakdown
+            threat_type = threat.get('threat_type', 'unknown')
+            report['threat_types'][threat_type] = report['threat_types'].get(threat_type, 0) + 1
+            
+            # Top threats (high severity)
+            if threat.get('threat_score', 0) > 0.7:
+                report['top_threats'].append({
+                    'title': threat.get('title', 'Unknown'),
+                    'score': threat.get('threat_score', 0),
+                    'type': threat.get('threat_type', 'unknown'),
+                    'source': threat.get('source_type', 'unknown'),
+                    'published': threat.get('published_at', 'Unknown')
+                })
+            
+            # Extract indicators
+            indicators = threat.get('indicators', {})
+            if isinstance(indicators, str):
+                try:
+                    indicators = json.loads(indicators)
+                except:
+                    indicators = {}
+            
+            for indicator_type, values in indicators.items():
+                if indicator_type in report['recent_indicators'] and isinstance(values, list):
+                    report['recent_indicators'][indicator_type].update(values)
+        
+        # Convert sets to lists
+        for indicator_type in report['recent_indicators']:
+            report['recent_indicators'][indicator_type] = list(report['recent_indicators'][indicator_type])
+        
+        # Sort top threats by score
+        report['top_threats'].sort(key=lambda x: x['score'], reverse=True)
+        report['top_threats'] = report['top_threats'][:10]  # Top 10
+        
+        # Add analysis insights
+        report['insights'] = {
+            'most_active_source': max(report['source_breakdown'].items(), key=lambda x: x[1])[0] if report['source_breakdown'] else 'None',
+            'most_common_threat_type': max(report['threat_types'].items(), key=lambda x: x[1])[0] if report['threat_types'] else 'None',
+            'total_indicators': sum(len(v) for v in report['recent_indicators'].values()),
+            'avg_threat_score': round(sum(t.get('threat_score', 0) for t in threats) / len(threats), 2) if threats else 0
+        }
+        
+        return report
         
     except Exception as e:
         logger.error(f"Error in hacker-grade report endpoint: {str(e)}")
