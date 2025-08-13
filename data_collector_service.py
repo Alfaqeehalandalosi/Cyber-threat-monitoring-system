@@ -34,7 +34,7 @@ class ThreatDataCollector:
     
     def __init__(self):
         self.db_path = "ctms/data/threat_intelligence.db"
-        self.collection_interval = 300  # 5 minutes
+        self.collection_interval = 60  # 1 minute instead of 5 minutes
         self.running = True
         self.session = None
         
@@ -624,8 +624,9 @@ class ThreatDataCollector:
             new_articles = 0
             for article in articles:
                 try:
+                    # Use INSERT OR REPLACE instead of INSERT OR IGNORE to ensure data is stored
                     cursor.execute('''
-                        INSERT OR IGNORE INTO threats 
+                        INSERT OR REPLACE INTO threats 
                         (title, content, threat_score, threat_type, source, source_type, 
                          published_at, hash_id, indicators)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -641,8 +642,8 @@ class ThreatDataCollector:
                         json.dumps(article.get('indicators', {}))
                     ))
                     
-                    if cursor.rowcount > 0:
-                        new_articles += 1
+                    new_articles += 1
+                    logger.info(f"Stored article: {article['title'][:50]}...")
                         
                 except Exception as e:
                     logger.error(f"Error storing article {article['title']}: {e}")
@@ -650,11 +651,11 @@ class ThreatDataCollector:
             conn.commit()
             conn.close()
             
-            logger.info(f"Stored {new_articles} new articles in database")
+            logger.info(f"✅ Successfully stored {new_articles} articles in database")
             return new_articles
             
         except Exception as e:
-            logger.error(f"Error storing threats: {e}")
+            logger.error(f"❌ Error storing threats: {e}")
             return 0
     
     async def log_collection(self, source_type: str, collected: int, new: int, 
@@ -758,19 +759,24 @@ class ThreatDataCollector:
         logger.info("🔄 Starting threat data collection service")
         logger.info(f"⏰ Collection interval: {self.collection_interval} seconds")
         
+        # Run initial collection immediately
+        logger.info("🚀 Running initial data collection...")
+        await self.collect_all_data()
+        
         while self.running:
             try:
-                await self.collect_all_data()
-                
                 # Wait for next collection cycle
                 await asyncio.sleep(self.collection_interval)
+                
+                # Run collection
+                await self.collect_all_data()
                 
             except asyncio.CancelledError:
                 logger.info("🛑 Collection service cancelled")
                 break
             except Exception as e:
                 logger.error(f"❌ Collection loop error: {e}")
-                await asyncio.sleep(60)  # Wait 1 minute on error
+                await asyncio.sleep(30)  # Wait 30 seconds on error
     
     def stop(self):
         """Stop the collection service"""
