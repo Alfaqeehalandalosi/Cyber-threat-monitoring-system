@@ -82,9 +82,21 @@ async def send_email_alert(recipients: List[str], subject: str, body: str):
     try:
         # Check if using demo credentials
         if ALERT_CONFIG['email_settings']['username'] == 'demo@example.com':
-            logger.info(f"DEMO MODE: Email alert would be sent to {len(recipients)} recipients")
-            logger.info(f"Subject: {subject}")
-            logger.info(f"Body preview: {body[:100]}...")
+            # Log to file instead of console
+            log_message = f"""
+=== EMAIL ALERT LOG ===
+Timestamp: {datetime.now().isoformat()}
+Mode: DEMO (No actual email sent)
+Recipients: {', '.join(recipients)}
+Subject: {subject}
+Body Preview: {body[:200]}...
+========================
+"""
+            # Write to email alert log file
+            with open('ctms/logs/email_alerts.log', 'a') as f:
+                f.write(log_message + '\n')
+            
+            logger.info(f"DEMO MODE: Email alert logged to ctms/logs/email_alerts.log")
             return True
             
         if not ALERT_CONFIG['email_settings']['username'] or not ALERT_CONFIG['email_settings']['password']:
@@ -106,10 +118,37 @@ async def send_email_alert(recipients: List[str], subject: str, body: str):
         server.send_message(msg)
         server.quit()
         
-        logger.info(f"Email alert sent to {len(recipients)} recipients")
+        # Log successful email to file
+        log_message = f"""
+=== EMAIL ALERT LOG ===
+Timestamp: {datetime.now().isoformat()}
+Mode: PRODUCTION (Actual email sent)
+Recipients: {', '.join(recipients)}
+Subject: {subject}
+Status: SUCCESS
+========================
+"""
+        with open('ctms/logs/email_alerts.log', 'a') as f:
+            f.write(log_message + '\n')
+        
+        logger.info(f"Email alert sent to {len(recipients)} recipients and logged")
         return True
         
     except Exception as e:
+        # Log failed email to file
+        log_message = f"""
+=== EMAIL ALERT LOG ===
+Timestamp: {datetime.now().isoformat()}
+Mode: PRODUCTION (Email failed)
+Recipients: {', '.join(recipients)}
+Subject: {subject}
+Error: {str(e)}
+Status: FAILED
+========================
+"""
+        with open('ctms/logs/email_alerts.log', 'a') as f:
+            f.write(log_message + '\n')
+        
         logger.error(f"Failed to send email alert: {str(e)}")
         return False
 

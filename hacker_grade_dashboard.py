@@ -502,21 +502,23 @@ def render_threat_report(report_data: Dict[str, Any]):
     
     with col1:
         # Threat type distribution
+        st.markdown("#### Threat Type Distribution")
         threat_types = report_data.get('threat_types', {})
         if threat_types:
-            df_threat = pd.DataFrame(list(threat_types.items()), columns=['Type', 'Count'])
-            fig = px.bar(df_threat, x='Type', y='Count', title='Threat Type Distribution',
-                       color_discrete_sequence=['#ff4444'])
-            st.plotly_chart(fig, use_container_width=True)
+            for threat_type, count in threat_types.items():
+                st.write(f"• **{threat_type}**: {count}")
+        else:
+            st.info("No threat types found")
     
     with col2:
         # Source distribution
+        st.markdown("#### Source Type Distribution")
         source_breakdown = report_data.get('source_breakdown', {})
         if source_breakdown:
-            df_source = pd.DataFrame(list(source_breakdown.items()), columns=['Source', 'Count'])
-            fig = px.bar(df_source, x='Source', y='Count', title='Source Type Distribution',
-                       color_discrete_sequence=['#0066ff'])
-            st.plotly_chart(fig, use_container_width=True)
+            for source, count in source_breakdown.items():
+                st.write(f"• **{source}**: {count}")
+        else:
+            st.info("No source data found")
     
     # Top threats
     st.markdown("### 🔥 Top Threats")
