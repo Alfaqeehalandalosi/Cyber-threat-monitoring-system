@@ -52,6 +52,11 @@ def fix_database_schema():
             cursor.execute("ALTER TABLE threats ADD COLUMN published_at TEXT")
             print("✅ Added published_at column")
         
+        if 'collected_at' not in column_names:
+            missing_columns.append('collected_at')
+            cursor.execute("ALTER TABLE threats ADD COLUMN collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            print("✅ Added collected_at column")
+        
         if 'hash_id' not in column_names:
             missing_columns.append('hash_id')
             try:
