@@ -23,7 +23,7 @@ def test_imports():
         ('seaborn', 'seaborn'),
         ('sqlalchemy', 'sqlalchemy'),
         ('redis', 'redis'),
-        ('python-dotenv', 'dotenv'),
+        ('dotenv', 'python-dotenv'),  # Fixed: import name is 'dotenv'
         ('pydantic', 'pydantic'),
         ('nltk', 'nltk'),
         ('textblob', 'textblob'),
