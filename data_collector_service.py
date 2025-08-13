@@ -183,6 +183,7 @@ class ThreatDataCollector:
                                     if threat_score > 0.2:  # Lower threshold
                                         # Extract indicators from content
                                         indicators = self._extract_indicators(threat_content)
+                                        logger.info(f"Extracted indicators for '{pattern}': {indicators}")
                                         
                                         article = {
                                             'title': f'Hacker Forum Threat: {pattern}',
@@ -293,6 +294,7 @@ class ThreatDataCollector:
                                         if threat_score > 0.3:  # Higher threshold for news
                                             # Extract indicators from content
                                             indicators = self._extract_indicators(match)
+                                            logger.info(f"Extracted indicators for news '{match[:50]}': {indicators}")
                                             
                                             article = {
                                                 'title': match.strip()[:100],
