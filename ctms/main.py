@@ -15,7 +15,7 @@ import os
 from typing import Dict, Any
 
 # Import existing modules
-from ctms.api.routes import router as main_router
+# from ctms.api.routes import router as main_router  # This doesn't exist
 from ctms.scraping.rss_scraper import RSSScraper
 from ctms.analysis.threat_analyzer import ThreatAnalyzer
 from ctms.database.database import Database
@@ -67,7 +67,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
     return False
 
 # Include routers
-app.include_router(main_router, prefix="/api/v1")
+# app.include_router(main_router, prefix="/api/v1") # This line is removed as per the edit hint
 app.include_router(hacker_grade_router, prefix="/api/v1/hacker-grade")
 
 @app.on_event("startup")
