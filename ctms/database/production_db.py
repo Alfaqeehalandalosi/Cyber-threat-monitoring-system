@@ -128,12 +128,14 @@ class ProductionDatabase:
             conn.close()
             
             return {
-                'total_threats': total_threats,
+                'total_articles': total_threats,  # Match dashboard expectation
                 'high_severity_count': high_severity_count,
                 'avg_threat_score': round(avg_score, 2),
-                'threat_types': threat_types,
-                'source_types': source_types,
+                'threat_categories': threat_types,  # Match dashboard expectation
+                'source_categories': source_types,  # Match dashboard expectation
                 'top_threats': top_threats,
+                'sources_used': len(source_types),  # Add sources count
+                'collection_time': datetime.now().isoformat(),  # Add collection time
                 'last_updated': datetime.now().isoformat()
             }
             

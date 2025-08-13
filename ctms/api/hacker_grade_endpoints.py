@@ -43,13 +43,13 @@ ALERT_CONFIG = {
         'smtp_server': 'smtp.gmail.com',
         'smtp_port': 587,
         'use_tls': True,
-        'username': '',  # Set in environment
-        'password': '',  # Set in environment
-        'recipients': []  # Set in environment
+        'username': 'demo@example.com',  # Demo email for testing
+        'password': 'demo_password',     # Demo password for testing
+        'recipients': ['admin@example.com']  # Demo recipients
     },
     'webhook_settings': {
-        'url': '',  # Set in environment
-        'headers': {}
+        'url': 'https://webhook.site/demo',  # Demo webhook URL
+        'headers': {'Content-Type': 'application/json'}
     }
 }
 
@@ -80,6 +80,13 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
 async def send_email_alert(recipients: List[str], subject: str, body: str):
     """Send email alert"""
     try:
+        # Check if using demo credentials
+        if ALERT_CONFIG['email_settings']['username'] == 'demo@example.com':
+            logger.info(f"DEMO MODE: Email alert would be sent to {len(recipients)} recipients")
+            logger.info(f"Subject: {subject}")
+            logger.info(f"Body preview: {body[:100]}...")
+            return True
+            
         if not ALERT_CONFIG['email_settings']['username'] or not ALERT_CONFIG['email_settings']['password']:
             logger.warning("Email credentials not configured")
             return False
@@ -485,6 +492,7 @@ async def test_hacker_grade_alerts(
         }
         
         success_count = 0
+        demo_mode = False
         
         # Test email alerts
         if ALERT_CONFIG['email_settings']['recipients']:
@@ -495,18 +503,27 @@ async def test_hacker_grade_alerts(
             )
             if email_success:
                 success_count += 1
+                if ALERT_CONFIG['email_settings']['username'] == 'demo@example.com':
+                    demo_mode = True
         
         # Test webhook alerts
         if ALERT_CONFIG['webhook_settings']['url']:
             webhook_success = await send_webhook_alert(ALERT_CONFIG['webhook_settings']['url'], test_data)
             if webhook_success:
                 success_count += 1
+                if 'webhook.site/demo' in ALERT_CONFIG['webhook_settings']['url']:
+                    demo_mode = True
+        
+        message = f'Hacker-grade test alerts sent. {success_count} successful.'
+        if demo_mode:
+            message += ' (Demo mode - configure real credentials for actual alerts)'
         
         return {
             'status': 'success',
-            'message': f'Hacker-grade test alerts sent. {success_count} successful.',
+            'message': message,
             'test_data': test_data,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'demo_mode': demo_mode
         }
         
     except Exception as e:
