@@ -19,8 +19,6 @@ from pydantic import BaseModel
 import re
 
 # Import our modules
-from ctms.scraping.hacker_grade_scraper import get_hacker_grade_threat_intelligence
-from ctms.analysis.hacker_grade_analyzer import analyze_hacker_grade_articles
 from ctms.database.production_db import db
 
 # Configure logging
