@@ -471,60 +471,124 @@ def render_github_exploits():
         </div>
         """, unsafe_allow_html=True)
 
-def render_threat_report(threat_data: Dict[str, Any]):
+def render_threat_report(report_data: Dict[str, Any]):
     """Render comprehensive threat report"""
     st.subheader("📋 Hacker-Grade Threat Intelligence Report")
     
-    report = threat_data.get('threat_report', {})
-    
-    if not report:
+    if not report_data:
         st.warning("No threat report available")
         return
     
     # Executive summary
     st.markdown("### Executive Summary")
-    summary = report.get('executive_summary', {})
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Threats", summary.get('total_threats', 0))
+        st.metric("Total Threats", report_data.get('total_threats', 0))
     with col2:
-        st.metric("Critical Threats", summary.get('critical_threats', 0))
+        st.metric("High Severity", report_data.get('threat_summary', {}).get('high_severity', 0))
     with col3:
-        st.metric("Recent Threats", summary.get('recent_threats', 0))
+        st.metric("Medium Severity", report_data.get('threat_summary', {}).get('medium_severity', 0))
     with col4:
-        st.metric("Avg Severity", f"{summary.get('average_severity', 0):.2f}")
+        st.metric("Avg Threat Score", f"{report_data.get('insights', {}).get('avg_threat_score', 0):.2f}")
     
-    # Recommendations
-    st.markdown("### 🎯 Recommendations")
-    recommendations = report.get('recommendations', [])
-    for rec in recommendations:
-        st.info(rec)
+    # Report generation info
+    st.info(f"📅 Report generated: {report_data.get('report_generated', 'Unknown')}")
     
     # Threat analysis
     st.markdown("### 📊 Threat Analysis")
-    analysis = report.get('threat_analysis', {})
     
-    if analysis:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Threat type distribution
+        threat_types = report_data.get('threat_types', {})
+        if threat_types:
+            df_threat = pd.DataFrame(list(threat_types.items()), columns=['Type', 'Count'])
+            fig = px.bar(df_threat, x='Type', y='Count', title='Threat Type Distribution',
+                       color_discrete_sequence=['#ff4444'])
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Source distribution
+        source_breakdown = report_data.get('source_breakdown', {})
+        if source_breakdown:
+            df_source = pd.DataFrame(list(source_breakdown.items()), columns=['Source', 'Count'])
+            fig = px.bar(df_source, x='Source', y='Count', title='Source Type Distribution',
+                       color_discrete_sequence=['#0066ff'])
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Top threats
+    st.markdown("### 🔥 Top Threats")
+    top_threats = report_data.get('top_threats', [])
+    if top_threats:
+        for i, threat in enumerate(top_threats[:5], 1):
+            score_color = "#ff4444" if threat.get('score', 0) > 0.8 else "#ffaa00" if threat.get('score', 0) > 0.5 else "#44aa44"
+            st.markdown(f"""
+            <div class="threat-card high-severity">
+                <h4>{i}. {threat.get('title', 'Unknown')}</h4>
+                <p><strong>Score:</strong> <span style="color: {score_color};">{threat.get('score', 0):.2f}</span></p>
+                <p><strong>Type:</strong> {threat.get('type', 'Unknown')}</p>
+                <p><strong>Source:</strong> {threat.get('source', 'Unknown')}</p>
+                <p><strong>Published:</strong> {threat.get('published', 'Unknown')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No high-severity threats found")
+    
+    # Recent indicators
+    st.markdown("### 🔍 Recent Indicators")
+    recent_indicators = report_data.get('recent_indicators', {})
+    if recent_indicators:
         col1, col2 = st.columns(2)
         
         with col1:
-            # Threat type distribution
-            threat_dist = analysis.get('threat_type_distribution', {})
-            if threat_dist:
-                df_threat = pd.DataFrame(list(threat_dist.items()), columns=['Type', 'Count'])
-                fig = px.bar(df_threat, x='Type', y='Count', title='Threat Type Distribution',
-                           color_discrete_sequence=['#ff4444'])
-                st.plotly_chart(fig, use_container_width=True)
+            st.markdown("#### CVE Identifiers")
+            cve_ids = recent_indicators.get('cve_identifiers', [])
+            if cve_ids:
+                for cve in cve_ids[:5]:
+                    st.code(cve)
+            else:
+                st.info("No CVE identifiers found")
+            
+            st.markdown("#### Company Names")
+            company_names = recent_indicators.get('company_names', [])
+            if company_names:
+                for company in company_names[:5]:
+                    st.code(company)
+            else:
+                st.info("No company names found")
         
         with col2:
-            # Source distribution
-            source_dist = analysis.get('source_type_distribution', {})
-            if source_dist:
-                df_source = pd.DataFrame(list(source_dist.items()), columns=['Source', 'Count'])
-                fig = px.bar(df_source, x='Source', y='Count', title='Source Type Distribution',
-                           color_discrete_sequence=['#0066ff'])
-                st.plotly_chart(fig, use_container_width=True)
+            st.markdown("#### GitHub Repositories")
+            github_repos = recent_indicators.get('github_repositories', [])
+            if github_repos:
+                for repo in github_repos[:5]:
+                    st.code(repo)
+            else:
+                st.info("No GitHub repositories found")
+            
+            st.markdown("#### IP Addresses")
+            ip_addresses = recent_indicators.get('ip_addresses', [])
+            if ip_addresses:
+                for ip in ip_addresses[:5]:
+                    st.code(ip)
+            else:
+                st.info("No IP addresses found")
+    
+    # Insights
+    st.markdown("### 💡 Insights")
+    insights = report_data.get('insights', {})
+    if insights:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Most Active Source", insights.get('most_active_source', 'None'))
+        with col2:
+            st.metric("Most Common Threat", insights.get('most_common_threat_type', 'None'))
+        with col3:
+            st.metric("Total Indicators", insights.get('total_indicators', 0))
+        with col4:
+            st.metric("Avg Threat Score", f"{insights.get('avg_threat_score', 0):.2f}")
 
 def render_indicators_section():
     """Render threat indicators section"""
@@ -701,8 +765,10 @@ def main():
     
     elif page == "Threat Report":
         render_header(api_status, collection_time, force_refresh)
-        if threat_data:
-            render_threat_report(threat_data)
+        # Get threat report data from the correct endpoint
+        threat_report_data = make_api_request("/api/v1/hacker-grade/threats/report", force_refresh=force_refresh)
+        if threat_report_data:
+            render_threat_report(threat_report_data)
         else:
             st.error("Failed to load hacker-grade threat report data")
     
