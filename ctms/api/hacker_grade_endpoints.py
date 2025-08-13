@@ -21,6 +21,7 @@ import re
 # Import our modules
 from ctms.scraping.hacker_grade_scraper import get_hacker_grade_threat_intelligence
 from ctms.analysis.hacker_grade_analyzer import analyze_hacker_grade_articles
+from ctms.database.production_db import db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -181,110 +182,37 @@ async def get_hacker_grade_threat_intelligence_endpoint(
     force_refresh: bool = False,
     token_verified: bool = Depends(verify_token)
 ) -> Dict[str, Any]:
-    """Get hacker-grade threat intelligence data"""
+    """Get hacker-grade threat intelligence data from database"""
     try:
-        current_time = datetime.now().timestamp()
+        # Get threats from database (fast)
+        threats = await db.get_recent_threats(limit=100, hours=24)
         
-        # Check cache
-        if not force_refresh and HACKER_GRADE_CACHE.get('data') and \
-           (current_time - HACKER_GRADE_CACHE.get('timestamp', 0)) < CACHE_DURATION:
-            logger.info("Returning cached hacker-grade threat intelligence data")
-            return HACKER_GRADE_CACHE['data']
+        # Get system status
+        system_status = await db.get_system_status()
         
-        # For now, use mock data to avoid timeout
-        # In production, this would collect real data
-        logger.info("Using mock hacker-grade threat intelligence data")
+        # Calculate summary metrics
+        threat_scores = [threat.get('threat_score', 0) for threat in threats]
+        avg_threat_score = sum(threat_scores) / len(threat_scores) if threat_scores else 0
         
-        mock_articles = [
-            {
-                'title': 'Critical Zero-Day Exploit for Windows Systems',
-                'content': 'A critical zero-day vulnerability has been discovered that allows remote code execution on Windows systems.',
-                'threat_score': 0.95,
-                'threat_type': 'zero_day',
-                'source': 'Hacker Forum',
-                'source_type': 'hacker_forum',
-                'published': datetime.now().isoformat(),
-                'indicators': {
-                    'cve_ids': ['CVE-2024-XXXX'],
-                    'ip_addresses': ['192.168.1.1'],
-                    'domains': ['malicious.example.com']
-                }
-            },
-            {
-                'title': 'New Ransomware Leak: Company Data Exposed',
-                'content': 'Ransomware group has leaked sensitive company data including customer information.',
-                'threat_score': 0.88,
-                'threat_type': 'data_breach',
-                'source': 'Ransomware Leak Site',
-                'source_type': 'ransomware_leak',
-                'published': datetime.now().isoformat(),
-                'indicators': {
-                    'domains': ['leak.example.com'],
-                    'hashes': ['a1b2c3d4e5f6...']
-                }
-            },
-            {
-                'title': 'GitHub: CVE-2024-1234 Exploit PoC',
-                'content': 'Proof of concept exploit for CVE-2024-1234 now available on GitHub.',
-                'threat_score': 0.82,
-                'threat_type': 'exploit',
-                'source': 'GitHub',
-                'source_type': 'github',
-                'published': datetime.now().isoformat(),
-                'indicators': {
-                    'cve_ids': ['CVE-2024-1234'],
-                    'github_repos': ['github.com/exploit/CVE-2024-1234']
-                }
-            },
-            {
-                'title': 'Paste Site: Credential Dump Analysis',
-                'content': 'Large credential dump found on paste site with millions of compromised accounts.',
-                'threat_score': 0.75,
-                'threat_type': 'data_breach',
-                'source': 'Paste Site',
-                'source_type': 'paste_site',
-                'published': datetime.now().isoformat(),
-                'indicators': {
-                    'email_addresses': ['user@example.com'],
-                    'domains': ['paste.example.com']
-                }
-            }
-        ]
+        # Get high severity threats
+        high_severity_threats = [t for t in threats if t.get('threat_score', 0) > 0.8]
         
-        # Create mock analysis result
-        analysis_result = {
-            'enhanced_articles': mock_articles,
-            'threat_report': {
-                'executive_summary': {
-                    'total_threats': len(mock_articles),
-                    'critical_threats': 2,
-                    'zero_day_threats': 1,
-                    'average_severity': 0.85
-                },
-                'threat_analysis': {
-                    'total_articles': len(mock_articles),
-                    'high_severity_count': 3,
-                    'zero_day_count': 1
-                }
-            },
+        # Get unique source types and threat types
+        source_types = list(set(t.get('source_type', '') for t in threats))
+        threat_types = list(set(t.get('threat_type', '') for t in threats))
+        
+        result = {
+            'threat_articles': threats,
+            'total_articles': len(threats),
+            'high_severity_count': len(high_severity_threats),
+            'source_types': source_types,
+            'threat_types': threat_types,
+            'avg_threat_score': round(avg_threat_score, 2),
+            'collection_time': system_status.get('last_collection'),
+            'next_collection': system_status.get('next_collection'),
+            'system_health': system_status.get('system_health'),
             'analysis_timestamp': datetime.now().isoformat()
         }
-        
-        # Combine data
-        result = {
-            'threat_articles': analysis_result['enhanced_articles'],
-            'total_articles': len(analysis_result['enhanced_articles']),
-            'high_severity_count': len([a for a in analysis_result['enhanced_articles'] if a.get('threat_score', 0) > 0.8]),
-            'source_types': list(set(a.get('source_type', '') for a in analysis_result['enhanced_articles'])),
-            'threat_types': list(set(a.get('threat_type', '') for a in analysis_result['enhanced_articles'])),
-            'collection_time': datetime.now().isoformat(),
-            'threat_report': analysis_result['threat_report'],
-            'analysis_timestamp': analysis_result['analysis_timestamp']
-        }
-        
-        # Update cache
-        HACKER_GRADE_CACHE['data'] = result
-        HACKER_GRADE_CACHE['timestamp'] = current_time
         
         return result
         
@@ -297,101 +225,12 @@ async def get_hacker_grade_threat_summary(
     force_refresh: bool = False,
     token_verified: bool = Depends(verify_token)
 ) -> Dict[str, Any]:
-    """Get hacker-grade threat intelligence summary"""
+    """Get hacker-grade threat intelligence summary from database"""
     try:
-        # Check cache first
-        if not force_refresh and HACKER_GRADE_CACHE.get('summary'):
-            cache_age = datetime.now().timestamp() - HACKER_GRADE_CACHE.get('summary_timestamp', 0)
-            if cache_age < CACHE_DURATION:
-                logger.info("Returning cached threat summary")
-                return HACKER_GRADE_CACHE['summary']
+        # Get summary from database (fast)
+        summary = await db.get_threat_summary()
         
-        # For now, return mock data to avoid timeout
-        # In production, this would call the full threat intelligence endpoint
-        mock_articles = [
-            {
-                'title': 'Critical Zero-Day Exploit for Windows Systems',
-                'threat_score': 0.95,
-                'threat_type': 'zero_day',
-                'source': 'Hacker Forum',
-                'source_type': 'hacker_forum'
-            },
-            {
-                'title': 'New Ransomware Leak: Company Data Exposed',
-                'threat_score': 0.88,
-                'threat_type': 'data_breach',
-                'source': 'Ransomware Leak Site',
-                'source_type': 'ransomware_leak'
-            },
-            {
-                'title': 'GitHub: CVE-2024-1234 Exploit PoC',
-                'threat_score': 0.82,
-                'threat_type': 'exploit',
-                'source': 'GitHub',
-                'source_type': 'github'
-            },
-            {
-                'title': 'Paste Site: Credential Dump Analysis',
-                'threat_score': 0.75,
-                'threat_type': 'data_breach',
-                'source': 'Paste Site',
-                'source_type': 'paste_site'
-            }
-        ]
-        
-        # Calculate summary metrics
-        threat_scores = [article.get('threat_score', 0) for article in mock_articles]
-        avg_threat_score = sum(threat_scores) / len(threat_scores) if threat_scores else 0
-        
-        # Get top threats
-        top_threats = sorted(mock_articles, key=lambda x: x.get('threat_score', 0), reverse=True)[:10]
-        
-        # Count threat types
-        threat_type_counts = {}
-        for article in mock_articles:
-            threat_type = article.get('threat_type', 'unknown')
-            threat_type_counts[threat_type] = threat_type_counts.get(threat_type, 0) + 1
-        
-        # Count source types
-        source_type_counts = {}
-        for article in mock_articles:
-            source_type = article.get('source_type', 'unknown')
-            source_type_counts[source_type] = source_type_counts.get(source_type, 0) + 1
-        
-        # Count by source category
-        source_categories = {
-            'hacker_forums': len([a for a in mock_articles if a.get('source_type') == 'hacker_forum']),
-            'ransomware_leaks': len([a for a in mock_articles if a.get('source_type') == 'ransomware_leak']),
-            'paste_sites': len([a for a in mock_articles if a.get('source_type') == 'paste_site']),
-            'github': len([a for a in mock_articles if a.get('source_type') == 'github'])
-        }
-        
-        summary_data = {
-            'total_articles': len(mock_articles),
-            'sources_used': len(source_type_counts),
-            'avg_threat_score': round(avg_threat_score, 2),
-            'high_severity_count': len([a for a in mock_articles if a.get('threat_score', 0) > 0.8]),
-            'collection_time': datetime.now().isoformat(),
-            'top_threats': [
-                {
-                    'title': threat.get('title', 'Unknown'),
-                    'threat_score': threat.get('threat_score', 0),
-                    'threat_type': threat.get('threat_type', 'unknown'),
-                    'source': threat.get('source', 'Unknown'),
-                    'source_type': threat.get('source_type', 'Unknown')
-                }
-                for threat in top_threats
-            ],
-            'threat_categories': threat_type_counts,
-            'source_distribution': source_type_counts,
-            'source_categories': source_categories
-        }
-        
-        # Cache the result
-        HACKER_GRADE_CACHE['summary'] = summary_data
-        HACKER_GRADE_CACHE['summary_timestamp'] = datetime.now().timestamp()
-        
-        return summary_data
+        return summary
         
     except Exception as e:
         logger.error(f"Error in hacker-grade threat summary endpoint: {str(e)}")
@@ -701,22 +540,16 @@ async def hacker_grade_health_check(
 ) -> Dict[str, Any]:
     """Health check for hacker-grade threat intelligence system"""
     try:
+        # Get system status from database
+        system_status = await db.get_system_status()
+        
         return {
             'status': 'healthy',
             'service': 'Hacker-Grade Threat Intelligence',
             'timestamp': datetime.now().isoformat(),
             'version': '3.0.0',
             'message': 'Hacker-grade threat intelligence system is operational',
-            'cache_status': {
-                'has_cached_data': bool(HACKER_GRADE_CACHE.get('data')),
-                'cache_age_seconds': datetime.now().timestamp() - HACKER_GRADE_CACHE.get('timestamp', 0) if HACKER_GRADE_CACHE.get('timestamp') else 0
-            },
-            'alert_status': {
-                'enabled': ALERT_CONFIG['enabled'],
-                'threshold': ALERT_CONFIG['high_severity_threshold'],
-                'email_configured': bool(ALERT_CONFIG['email_settings']['recipients']),
-                'webhook_configured': bool(ALERT_CONFIG['webhook_settings']['url'])
-            },
+            'system_status': system_status,
             'source_types': [
                 'hacker_forums',
                 'ransomware_leak_sites', 
@@ -728,3 +561,91 @@ async def hacker_grade_health_check(
     except Exception as e:
         logger.error(f"Error in hacker-grade health check: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+
+@router.get("/system/status")
+async def get_system_status(
+    token_verified: bool = Depends(verify_token)
+) -> Dict[str, Any]:
+    """Get detailed system status"""
+    try:
+        system_status = await db.get_system_status()
+        collection_logs = await db.get_collection_logs(limit=10)
+        
+        return {
+            'system_status': system_status,
+            'recent_collections': collection_logs,
+            'collection_frequency': '5 minutes',
+            'data_sources': [
+                'hacker_forums',
+                'ransomware_leak_sites',
+                'paste_sites',
+                'github_monitoring'
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting system status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/threats/search")
+async def search_threats(
+    query: str,
+    limit: int = 50,
+    token_verified: bool = Depends(verify_token)
+) -> Dict[str, Any]:
+    """Search threats by query"""
+    try:
+        threats = await db.search_threats(query, limit)
+        
+        return {
+            'query': query,
+            'results': threats,
+            'total_results': len(threats),
+            'search_timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error searching threats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/threats/by-type/{threat_type}")
+async def get_threats_by_type(
+    threat_type: str,
+    limit: int = 50,
+    token_verified: bool = Depends(verify_token)
+) -> Dict[str, Any]:
+    """Get threats by type"""
+    try:
+        threats = await db.get_threats_by_type(threat_type, limit)
+        
+        return {
+            'threat_type': threat_type,
+            'threats': threats,
+            'total_threats': len(threats),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting threats by type: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/threats/by-source/{source_type}")
+async def get_threats_by_source(
+    source_type: str,
+    limit: int = 50,
+    token_verified: bool = Depends(verify_token)
+) -> Dict[str, Any]:
+    """Get threats by source type"""
+    try:
+        threats = await db.get_threats_by_source(source_type, limit)
+        
+        return {
+            'source_type': source_type,
+            'threats': threats,
+            'total_threats': len(threats),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting threats by source: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
